@@ -5,20 +5,18 @@ import pickle  # To load the trained EFDT model
 from collections import defaultdict
 import time
 
-#  Load trained EFDT model
+# Load trained EFDT model
 with open("hat_model.pkl", "rb") as f:
     hat = pickle.load(f)
 
 print("HAT model loaded for real-time DDoS detection!")
 
-
-
-#  Define network interface & parameters
-INTERFACE = "Wi-Fi 2"  # network interface
+# Define network interface & parameters
+INTERFACE = "Wi-Fi 2"
 CAPTURE_DURATION = 60  # Capture time in seconds
 OUTPUT_CSV = "captured_traffic_with_predictions.csv"
 
-#  Initialize flow statistics storage
+# Initialize flow statistics storage
 flow_stats = defaultdict(lambda: {
     "Source IP": "",
     "Source Port": 0,
@@ -33,15 +31,15 @@ flow_stats = defaultdict(lambda: {
     "Start Time": None,
     "Last Packet Time": None,
     "Average Packet Size": 0,
-    "Prediction": "Unknown"  # Stores HAT classification result
+    "Prediction": "Unknown"
 })
 
-#  Function to process packets & classify them
+# Function to process packets & classify them
 def process_packet(packet):
     try:
         if "IP" in packet and ("TCP" in packet or "UDP" in packet):
             src_ip = packet.ip.src
-            protocol = packet.transport_layer  # TCP/UDP
+            protocol = packet.transport_layer
             timestamp = float(packet.sniff_time.timestamp())
             src_port = int(packet[protocol].srcport)
             pkt_length = int(packet.length)
@@ -81,46 +79,41 @@ def process_packet(packet):
             # Update last packet time
             flow_stats[flow_key]["Last Packet Time"] = timestamp
 
-            #  Extract features for HAT inference
+            # Extract features for HAT inference
             features = {
                 "Average Packet Size": flow_stats[flow_key]["Average Packet Size"],
-                "Fwd Packet Length Min": np.min(flow_stats[flow_key]["Fwd Packet Lengths"]) if flow_stats[flow_key]["Fwd Packet Lengths"] else 0,
-                "Packet Length Mean": np.mean(flow_stats[flow_key]["Fwd Packet Lengths"]) if flow_stats[flow_key]["Fwd Packet Lengths"] else 0,
-                "Subflow Fwd Bytes": flow_stats[flow_key]["Total Length of Fwd Packets"],
-                "Fwd Packet Length Mean": flow_stats[flow_key]["Total Length of Fwd Packets"] / len(flow_stats[flow_key]["Fwd Packet Lengths"]) if flow_stats[flow_key]["Fwd Packet Lengths"] else 0,
-                "Total Length of Fwd Packets": flow_stats[flow_key]["Total Length of Fwd Packets"],
-                "Fwd Packet Length Max": np.max(flow_stats[flow_key]["Fwd Packet Lengths"]) if flow_stats[flow_key]["Fwd Packet Lengths"] else 0,
-                "Max Packet Length": np.max(flow_stats[flow_key]["Fwd Packet Lengths"]) if flow_stats[flow_key]["Fwd Packet Lengths"] else 0,
-                "Min Packet Length": np.min(flow_stats[flow_key]["Fwd Packet Lengths"]) if flow_stats[flow_key]["Fwd Packet Lengths"] else 0,
                 "Flow Bytes/s": flow_stats[flow_key]["Flow Bytes/s"],
-                "Flow Packets/s": len(flow_stats[flow_key]["Fwd Packet Lengths"]) / flow_stats[flow_key]["Flow Duration"] if flow_stats[flow_key]["Flow Duration"] > 0 else 0,
                 "Flow Duration": flow_stats[flow_key]["Flow Duration"]
             }
-
-            #  Perform real-time inference
             
-            prediction = hat.predict_one(features)
-            flow_stats[flow_key]["Prediction"] = prediction  # Store prediction result
-            print(f"Packet from {src_ip}:{src_port} classified as: {prediction}")
+            # Add individual elements from arrays as separate features
+            for i, val in enumerate(flow_stats[flow_key]["Fwd Packet Lengths"]):
+                features[f"Fwd Packet Lengths_{i}"] = val
+            for i, val in enumerate(flow_stats[flow_key]["Flow IATs"]):
+                features[f"Flow IATs_{i}"] = val
+            for i, val in enumerate(flow_stats[flow_key]["Fwd IATs"]):
+                features[f"Fwd IATs_{i}"] = val
 
+            # Perform real-time inference
+            prediction = hat.predict_one(features)
+            flow_stats[flow_key]["Prediction"] = prediction
+            print(f"Packet from {src_ip}:{src_port} classified as: {prediction}")
+    
     except Exception as e:
         print(f"Error processing packet: {e}")
 
-
-
-
-#  Start packet capture & classification
+# Start packet capture & classification
 print(f"Starting real-time DDoS detection on interface {INTERFACE} for {CAPTURE_DURATION} seconds...")
 capture = pyshark.LiveCapture(interface=INTERFACE)
 
-#  Capture packets for a fixed duration
+# Capture packets for a fixed duration
 start_time = time.time()
 for packet in capture.sniff_continuously():
     if time.time() - start_time > CAPTURE_DURATION:
         break
     process_packet(packet)
 
-#  Convert statistics into DataFrame & Save Results
+# Convert statistics into DataFrame & Save Results
 data = []
 
 for flow_key, stats in flow_stats.items():
@@ -128,6 +121,6 @@ for flow_key, stats in flow_stats.items():
 
 df = pd.DataFrame(data)
 
-#  Save results to CSV (with predictions)
+# Save results to CSV
 df.to_csv(OUTPUT_CSV, index=False)
 print(f"DDoS detection completed. Results saved to {OUTPUT_CSV}")
