@@ -1,170 +1,156 @@
-from scapy.all import *
-import pandas as pd
-import random
-import numpy as np
+import scapy.all as scapy
+import threading
 import time
+import random
+import pyshark
+import pandas as pd
+import numpy as np
+from collections import defaultdict
 
-# Parameters
-TARGET_IP = "192.168.1.1"  # Replace with your target IP (testing environment)
-TARGET_PORT = 80           # Replace with your target port
-OUTPUT_CSV = "traffic_dataset.csv"
-NUM_ATTACK_PACKETS = 1000  # Number of SYN flood packets
-NUM_BENIGN_PACKETS = 1000  # Number of benign packets
-
-# Dataset storage
-traffic_data = []
+# Define interface and parameters
+INTERFACE = "Wi-Fi 2"
+CAPTURE_DURATION = 60
+OUTPUT_CSV = "captured_traffic_with_labels.csv"
 
 # Flow statistics storage
-flow_stats = {}
+flow_stats = defaultdict(lambda: {
+    "Start Time": None, 
+    "Last Packet Time": None,
+    "Total Length of Fwd Packets": 0,
+    "Total Backward Packets": 0,
+    "Fwd Packet Lengths": [],
+    "Packet Lengths": [],
+    "Fwd IATs": [],
+    "Bwd IATs": [],
+    "Active Times": [],
+    "Idle Times": [],
+    "act_data_pkt_fwd": 0,
+    "Subflow Fwd Bytes": 0,
+    "Label": "benign"
+})
 
-def generate_syn_flood(target_ip, target_port):
-    """Generate SYN flood attack traffic."""
-    for _ in range(NUM_ATTACK_PACKETS):
-        src_ip = f"{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}"
-        src_port = random.randint(1024, 65535)
-        ip_layer = IP(src=src_ip, dst=target_ip)
-        tcp_layer = TCP(sport=src_port, dport=target_port, flags="S")
-        send(ip_layer / tcp_layer, verbose=False)
-        
-        # Update flow stats
-        flow_key = (src_ip, src_port, target_ip, target_port, "TCP")
-        if flow_key not in flow_stats:
-            flow_stats[flow_key] = {
-                "Start Time": time.time(),
-                "Last Packet Time": time.time(),
-                "Total Length of Fwd Packets": 0,
-                "Total Backward Packets": 0,
-                "Fwd Packet Lengths": [len(ip_layer / tcp_layer)],
-                "Packet Lengths": [len(ip_layer / tcp_layer)],
-                "Fwd IATs": [],
-                "Bwd IATs": [],
-                "Active Times": [],
-                "Idle Times": [],
-                "act_data_pkt_fwd": 0,
-                "Subflow Fwd Bytes": len(ip_layer / tcp_layer)
-            }
-        else:
-            flow_stats[flow_key]["Last Packet Time"] = time.time()
-            flow_stats[flow_key]["Fwd Packet Lengths"].append(len(ip_layer / tcp_layer))
-            flow_stats[flow_key]["Packet Lengths"].append(len(ip_layer / tcp_layer))
-            flow_stats[flow_key]["Subflow Fwd Bytes"] += len(ip_layer / tcp_layer)
-            
-            # Compute inter-arrival times
-            last_time = flow_stats[flow_key]["Last Packet Time"] - 0.01  # Simulate previous packet time
-            iat = time.time() - last_time
-            flow_stats[flow_key]["Fwd IATs"].append(iat)
-            
-            # Active and idle time calculation
-            time_diff = time.time() - last_time
-            if time_diff < 1:  # Active threshold
-                flow_stats[flow_key]["Active Times"].append(time_diff)
-            else:
-                flow_stats[flow_key]["Idle Times"].append(time_diff)
+start_time = None
 
-def generate_benign_traffic(target_ip, target_port):
-    """Generate benign traffic (normal TCP handshake)."""
-    for _ in range(NUM_BENIGN_PACKETS):
-        src_ip = f"{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}.{random.randint(1, 255)}"
-        src_port = random.randint(1024, 65535)
-        ip_layer = IP(src=src_ip, dst=target_ip)
-        tcp_layer_syn = TCP(sport=src_port, dport=target_port, flags="S")
-        
-        # Send SYN and wait for SYN-ACK (simulate normal handshake)
-        syn_ack = sr1(ip_layer / tcp_layer_syn, timeout=1, verbose=False)
-        
-        if syn_ack and TCP in syn_ack and syn_ack[TCP].flags == "SA":
-            tcp_layer_ack = TCP(sport=src_port, dport=target_port, flags="A", seq=syn_ack.ack, ack=syn_ack.seq + 1)
-            send(ip_layer / tcp_layer_ack, verbose=False)
-            
-            # Update flow stats
-            flow_key = (src_ip, src_port, target_ip, target_port, "TCP")
-            if flow_key not in flow_stats:
-                flow_stats[flow_key] = {
-                    "Start Time": time.time(),
-                    "Last Packet Time": time.time(),
-                    "Total Length of Fwd Packets": len(ip_layer / tcp_layer_syn) + len(ip_layer / tcp_layer_ack),
-                    "Total Backward Packets": 1,  # Counting SYN-ACK as backward packet
-                    "Fwd Packet Lengths": [len(ip_layer / tcp_layer_syn), len(ip_layer / tcp_layer_ack)],
-                    "Packet Lengths": [len(ip_layer / tcp_layer_syn), len(ip_layer / tcp_layer_ack), len(syn_ack)],
-                    "Fwd IATs": [],
-                    "Bwd IATs": [],
-                    "Active Times": [],
-                    "Idle Times": [],
-                    "act_data_pkt_fwd": 0,
-                    "Subflow Fwd Bytes": len(ip_layer / tcp_layer_syn) + len(ip_layer / tcp_layer_ack)
-                }
-            else:
-                flow_stats[flow_key]["Last Packet Time"] = time.time()
-                flow_stats[flow_key]["Fwd Packet Lengths"].append(len(ip_layer / tcp_layer_ack))
-                flow_stats[flow_key]["Packet Lengths"].append(len(ip_layer / tcp_layer_ack))
-                flow_stats[flow_key]["Packet Lengths"].append(len(syn_ack))
-                flow_stats[flow_key]["Total Backward Packets"] += 1
-                flow_stats[flow_key]["Subflow Fwd Bytes"] += len(ip_layer / tcp_layer_ack)
-                
-                # Compute inter-arrival times
-                last_time = flow_stats[flow_key]["Last Packet Time"] - 0.01  # Simulate previous packet time
-                iat = time.time() - last_time
-                flow_stats[flow_key]["Fwd IATs"].append(iat)
-                
-                # Active and idle time calculation
-                time_diff = time.time() - last_time
-                if time_diff < 1:  # Active threshold
-                    flow_stats[flow_key]["Active Times"].append(time_diff)
+ATTACKER_IP = "192.168.1.50"
+BENIGN_USERS = ["192.168.1.10", "192.168.1.20", "192.168.1.30"]
+
+def syn_flood(target_ip, target_port):
+    while True:
+        ip = scapy.IP(src=ATTACKER_IP, dst=target_ip)
+        tcp = scapy.TCP(sport=scapy.RandShort(), dport=target_port, flags="S")
+        packet = ip / tcp
+        scapy.send(packet, verbose=False)
+
+def benign_traffic(target_ip, target_port, src_ip):
+    while True:
+        ip = scapy.IP(src=src_ip, dst=target_ip)
+        tcp = scapy.TCP(sport=scapy.RandShort(), dport=target_port, flags="PA")
+        packet = ip / tcp / "Hello, server!"
+        scapy.send(packet, verbose=False)
+        time.sleep(random.uniform(0.5, 2))
+
+# Start attacker and benign users
+attacker_thread = threading.Thread(target=syn_flood, args=("192.168.1.100", 80))
+benign_threads = [threading.Thread(target=benign_traffic, args=("192.168.1.100", 80, ip)) for ip in BENIGN_USERS]
+
+attacker_thread.start()
+for thread in benign_threads:
+    thread.start()
+
+# Packet processing function
+def process_packet(packet):
+    global start_time
+    try:
+        if hasattr(packet, "ip") and hasattr(packet, "transport_layer"):
+            src_ip = getattr(packet.ip, "src", None)
+            dst_ip = getattr(packet.ip, "dst", None)
+            protocol = packet.transport_layer
+            timestamp = float(packet.sniff_time.timestamp())
+
+            if hasattr(packet[protocol], "srcport") and hasattr(packet[protocol], "dstport"):
+                src_port = int(getattr(packet[protocol], "srcport", 0))
+                dst_port = int(getattr(packet[protocol], "dstport", 0))
+                pkt_length = int(getattr(packet, "length", 0))
+
+                if start_time is None:
+                    start_time = timestamp
+
+                flow_key = (src_ip, src_port, dst_ip, dst_port, protocol)
+
+                if flow_stats[flow_key]["Start Time"] is None:
+                    flow_stats[flow_key]["Start Time"] = timestamp
+
+                last_time = flow_stats[flow_key]["Last Packet Time"]
+                flow_stats[flow_key]["Last Packet Time"] = timestamp
+
+                if last_time:
+                    iat = timestamp - last_time
+                    if src_ip == packet.ip.src:
+                        flow_stats[flow_key]["Fwd IATs"].append(iat)
+                        flow_stats[flow_key]["act_data_pkt_fwd"] += 1
+                    else:
+                        flow_stats[flow_key]["Bwd IATs"].append(iat)
+
+                    if iat < 1.0:
+                        flow_stats[flow_key]["Active Times"].append(iat)
+                    else:
+                        flow_stats[flow_key]["Idle Times"].append(iat)
+
+                flow_stats[flow_key]["Packet Lengths"].append(pkt_length)
+                if src_ip == packet.ip.src:
+                    flow_stats[flow_key]["Fwd Packet Lengths"].append(pkt_length)
+                    flow_stats[flow_key]["Total Length of Fwd Packets"] += pkt_length
+                    flow_stats[flow_key]["Subflow Fwd Bytes"] += pkt_length
                 else:
-                    flow_stats[flow_key]["Idle Times"].append(time_diff)
+                    flow_stats[flow_key]["Total Backward Packets"] += 1
 
-def compute_features(flow_stats):
-    """Compute features for each flow."""
-    data = []
-    for flow_key, stats in flow_stats.items():
-        duration = max((stats["Last Packet Time"] - stats["Start Time"]), 1e-6)  # Prevent zero duration
-        feature_vector = {
-            "Flow Duration": duration,
-            "Flow Bytes/s": stats["Total Length of Fwd Packets"] / duration,
-            "Flow Packets/s": len(stats["Packet Lengths"]) / duration,
-            "Fwd Packet Length Min": min(stats["Fwd Packet Lengths"]) if stats["Fwd Packet Lengths"] else 0,
-            "Fwd Packet Length Max": max(stats["Fwd Packet Lengths"]) if stats["Fwd Packet Lengths"] else 0,
-            "Fwd Packet Length Mean": np.mean(stats["Fwd Packet Lengths"]) if stats["Fwd Packet Lengths"] else 0,
-            "Packet Length Std": np.std(stats["Packet Lengths"]) if stats["Packet Lengths"] else 0,
-            "Packet Length Variance": np.var(stats["Packet Lengths"]) if stats["Packet Lengths"] else 0,
-            "Active Max": max(stats["Active Times"]) if stats["Active Times"] else 0,
-            "Active Mean": np.mean(stats["Active Times"]) if stats["Active Times"] else 0,
-            "Idle Max": max(stats["Idle Times"]) if stats["Idle Times"] else 0,
-            "Idle Mean": np.mean(stats["Idle Times"]) if stats["Idle Times"] else 0,
-            "Bwd IAT Max": max(stats["Bwd IATs"]) if stats["Bwd IATs"] else 0,
-            "Bwd IAT Std": np.std(stats["Bwd IATs"]) if stats["Bwd IATs"] else 0,
-            "Bwd IAT Total": sum(stats["Bwd IATs"]) if stats["Bwd IATs"] else 0,
-            "Avg Fwd Segment Size": np.mean(stats["Fwd Packet Lengths"]) if stats["Fwd Packet Lengths"] else 0,
-            "Subflow Fwd Bytes": stats["Subflow Fwd Bytes"],
-            "Total Length of Fwd Packets": stats["Total Length of Fwd Packets"],
-            "Total Backward Packets": stats["Total Backward Packets"],
-            "act_data_pkt_fwd": stats["act_data_pkt_fwd"]
-        }
-        
-        # Determine label based on flow type
-        if flow_key[0].startswith("192.168.1."):  # Assuming benign traffic starts with this IP
-            feature_vector["Label"] = "benign"
-        else:
-            feature_vector["Label"] = "attack"
-        
-        data.append(feature_vector)
-    return data
+                # Assign labels based on IP
+                if src_ip == ATTACKER_IP:
+                    flow_stats[flow_key]["Label"] = "attack"
+                elif src_ip in BENIGN_USERS:
+                    flow_stats[flow_key]["Label"] = "benign"
+    except Exception as e:
+        print(f"Error processing packet: {e}")
 
-def save_dataset(data):
-    """Save the generated traffic data to a CSV file."""
-    df = pd.DataFrame(data)
-    df.to_csv(OUTPUT_CSV, index=False)
-    print(f"Dataset saved to {OUTPUT_CSV}")
+# Start capture
+print(f"Capturing on {INTERFACE} for {CAPTURE_DURATION} seconds...")
+capture = pyshark.LiveCapture(interface=INTERFACE)
 
-if __name__ == "__main__":
-    print("Generating SYN flood attack traffic...")
-    generate_syn_flood(TARGET_IP, TARGET_PORT)
-    
-    print("Generating benign traffic...")
-    generate_benign_traffic(TARGET_IP, TARGET_PORT)
-    
-    print("Computing features...")
-    data = compute_features(flow_stats)
-    
-    print("Saving dataset...")
-    save_dataset(data)
+start_time = time.time()
+for packet in capture.sniff_continuously():
+    if time.time() - start_time > CAPTURE_DURATION:
+        break
+    process_packet(packet)
+
+# Compute features
+data = []
+for flow_key, stats in flow_stats.items():
+    duration = max((stats["Last Packet Time"] - stats["Start Time"]), 1e-10)
+    feature_vector = {
+        "Flow Duration": duration,
+        "Flow Bytes/s": stats["Total Length of Fwd Packets"] / duration,
+        "Flow Packets/s": len(stats["Packet Lengths"]) / duration,
+        "Total Length of Fwd Packets": stats["Total Length of Fwd Packets"],
+        "Total Backward Packets": stats["Total Backward Packets"],
+        "Subflow Fwd Bytes": stats["Subflow Fwd Bytes"],
+        "Fwd Packet Length Min": min(stats["Fwd Packet Lengths"], default=0),
+        "Fwd Packet Length Max": max(stats["Fwd Packet Lengths"], default=0),
+        "Fwd Packet Length Mean": np.mean(stats["Fwd Packet Lengths"]) if stats["Fwd Packet Lengths"] else 0,
+        "Packet Length Std": np.std(stats["Packet Lengths"], dtype=np.float64) if stats["Packet Lengths"] else 0,
+        "Packet Length Variance": np.var(stats["Packet Lengths"], dtype=np.float64) if stats["Packet Lengths"] else 0,
+        "Bwd IAT Max": max(stats["Bwd IATs"], default=0),
+        "Bwd IAT Std": np.std(stats["Bwd IATs"], dtype=np.float64) if stats["Bwd IATs"] else 0,
+        "Bwd IAT Total": sum(stats["Bwd IATs"]),
+        "Active Max": max(stats["Active Times"], default=0),
+        "Active Mean": np.mean(stats["Active Times"], dtype=np.float64) if stats["Active Times"] else 0,
+        "Idle Max": max(stats["Idle Times"], default=0),
+        "Idle Mean": np.mean(stats["Idle Times"], dtype=np.float64) if stats["Idle Times"] else 0,
+        "act_data_pkt_fwd": stats["act_data_pkt_fwd"],
+        "Label": stats["Label"]
+    }
+    data.append(feature_vector)
+
+# Save to CSV
+pd.DataFrame(data).to_csv(OUTPUT_CSV, index=False, float_format="%.10f")
+print(f"Results saved to {OUTPUT_CSV}")
+
