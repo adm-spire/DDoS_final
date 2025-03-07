@@ -32,7 +32,11 @@ flow_stats = defaultdict(lambda: {
 start_time = None
 
 ATTACKER_IP = "192.168.1.50"
-BENIGN_USERS = ["192.168.1.10", "192.168.1.20", "192.168.1.30"]
+BENIGN_USERS = [  # Increased to 10 users
+    "192.168.1.10", "192.168.1.20", "192.168.1.30", "192.168.1.40",
+    "192.168.1.50", "192.168.1.60", "192.168.1.70", "192.168.1.80",
+    "192.168.1.90", "192.168.1.100"
+]
 
 def syn_flood(target_ip, target_port):
     while True:
@@ -153,4 +157,5 @@ for flow_key, stats in flow_stats.items():
 # Save to CSV
 pd.DataFrame(data).to_csv(OUTPUT_CSV, index=False, float_format="%.10f")
 print(f"Results saved to {OUTPUT_CSV}")
+
 
