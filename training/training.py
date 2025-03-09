@@ -1,6 +1,13 @@
 import pandas as pd
 import pickle
 from river import stream, tree, metrics
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from preprocessing.entropy_adaptive import AdaptiveEntropyHAT
+from preprocessing.gradual_drift import SlidingWindowHAT_v1
+from preprocessing.recurring_drift import SlidingWindowHAT_v2
 
 # Load CSV file
 CSV_FILE = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\captured_traffic_with_labels.csv"  # CSV file
@@ -18,6 +25,11 @@ y = df[TARGET_COLUMN]  # Target column
 # Convert data into a River-compatible stream
 data_stream = stream.iter_pandas(X, y)
 
+#combined  custom classes 
+class HybridHAT(AdaptiveEntropyHAT, SlidingWindowHAT_v1, SlidingWindowHAT_v2):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
 # Model save path
 MODEL_PATH = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\hat_model.pkl"
 
@@ -27,7 +39,7 @@ try:
         hat = pickle.load(f)
     print("Loaded existing model from disk.")
 except FileNotFoundError:
-    hat = tree.HoeffdingAdaptiveTreeClassifier()
+    hat = HybridHAT()
     print("No existing model found. Training a new one.")
 
 # Define accuracy metric
