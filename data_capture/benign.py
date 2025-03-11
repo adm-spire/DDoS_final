@@ -1,9 +1,9 @@
 import socket
 import time
 
-def send_tcp(ip, port, message, count=10, delay=1):
-    """Send TCP packets to a specified IP and port."""
-    for _ in range(count):
+def send_tcp(ip, port, message, delay=1):
+    """Send TCP packets indefinitely to a specified IP and port."""
+    while True:
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.connect((ip, port))
@@ -13,10 +13,10 @@ def send_tcp(ip, port, message, count=10, delay=1):
             print(f"TCP Error: {e}")
         time.sleep(delay)
 
-def send_udp(ip, port, message, count=10, delay=1):
-    """Send UDP packets to a specified IP and port."""
+def send_udp(ip, port, message, delay=1):
+    """Send UDP packets indefinitely to a specified IP and port."""
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-        for _ in range(count):
+        while True:
             try:
                 s.sendto(message.encode(), (ip, port))
                 print(f"Sent UDP: {message}")
@@ -24,10 +24,21 @@ def send_udp(ip, port, message, count=10, delay=1):
                 print(f"UDP Error: {e}")
             time.sleep(delay)
 
-# Example usage
-TARGET_IP = "192.168.1.100"
+
+TARGET_HOSTNAME = "raspberrypi.local"  # hostname
+TARGET_IP = socket.gethostbyname(TARGET_HOSTNAME)  # Converts hostname to IP
 TARGET_PORT = 8080
 MESSAGE = "Hello from benign traffic!"
 
-send_tcp(TARGET_IP, TARGET_PORT, MESSAGE)
-send_udp(TARGET_IP, TARGET_PORT, MESSAGE)
+# Run both functions indefinitely 
+import threading
+
+tcp_thread = threading.Thread(target=send_tcp, args=(TARGET_IP, TARGET_PORT, MESSAGE))
+udp_thread = threading.Thread(target=send_udp, args=(TARGET_IP, TARGET_PORT, MESSAGE))
+
+tcp_thread.start()
+udp_thread.start()
+
+tcp_thread.join()
+udp_thread.join()
+
