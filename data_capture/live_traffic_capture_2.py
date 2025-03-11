@@ -38,13 +38,18 @@ start_time = None
 def process_packet(packet):
     global start_time
     try:
-        if hasattr(packet, "ip") and hasattr(packet, "transport_layer"):
-
-            src_ip = getattr(packet.ip, "src", None)
-            dst_ip = getattr(packet.ip, "dst", None)
+        if (hasattr(packet, "ip") or hasattr(packet, "ipv6")) and hasattr(packet, "transport_layer"):
+            
+            if hasattr(packet, "ip"):
+                src_ip = getattr(packet.ip, "src", None)
+                dst_ip = getattr(packet.ip, "dst", None)
+            else:
+                src_ip = getattr(packet.ipv6, "src", None)
+                dst_ip = getattr(packet.ipv6, "dst", None)
+            
             protocol = packet.transport_layer
             timestamp = float(packet.sniff_time.timestamp())
-
+            
             if hasattr(packet[protocol], "srcport") and hasattr(packet[protocol], "dstport"):
                 src_port = int(getattr(packet[protocol], "srcport", 0))
                 dst_port = int(getattr(packet[protocol], "dstport", 0))
@@ -64,7 +69,7 @@ def process_packet(packet):
                 # Compute inter-arrival times
                 if last_time:
                     iat = timestamp - last_time
-                    if src_ip == packet.ip.src:
+                    if src_ip == getattr(packet, "ip", getattr(packet, "ipv6", None)).src:
                         flow_stats[flow_key]["Fwd IATs"].append(iat)
                     else:
                         flow_stats[flow_key]["Bwd IATs"].append(iat)
@@ -79,7 +84,7 @@ def process_packet(packet):
 
                 # Store forward and backward packet lengths
                 flow_stats[flow_key]["Packet Lengths"].append(pkt_length)
-                if src_ip == packet.ip.src:
+                if src_ip == getattr(packet, "ip", getattr(packet, "ipv6", None)).src:
                     flow_stats[flow_key]["Fwd Packet Lengths"].append(pkt_length)
                     flow_stats[flow_key]["Total Length of Fwd Packets"] += pkt_length
                     flow_stats[flow_key]["Subflow Fwd Bytes"] += pkt_length
@@ -130,5 +135,5 @@ for flow_key, stats in flow_stats.items():
     data.append(feature_vector)
 
 # Save to CSV
-pd.DataFrame(data).to_csv(OUTPUT_CSV, index=False,float_format="%.10f")
+pd.DataFrame(data).to_csv(OUTPUT_CSV, index=False, float_format="%.10f")
 print(f"Results saved to {OUTPUT_CSV}")
