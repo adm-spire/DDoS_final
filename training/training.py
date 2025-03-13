@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from preprocessing.entropy_adaptive import AdaptiveEntropyHAT
 from preprocessing.gradual_drift import SlidingWindowHAT_v1
-from preprocessing.recurring_drift import SlidingWindowHAT_v2
+
 
 # Load CSV file
 CSV_FILE = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\captured_traffic_with_labels.csv"  # CSV file
@@ -26,7 +26,7 @@ y = df[TARGET_COLUMN]  # Target column
 data_stream = stream.iter_pandas(X, y)
 
 #combined  custom classes 
-class HybridHAT(AdaptiveEntropyHAT, SlidingWindowHAT_v1, SlidingWindowHAT_v2):
+class HybridHAT(AdaptiveEntropyHAT, SlidingWindowHAT_v1):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
