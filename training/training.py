@@ -6,7 +6,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from preprocessing.entropy_adaptive import AdaptiveEntropyHAT
-from preprocessing.gradual_drift import SlidingWindowHAT_v1
+#from preprocessing.gradual_drift import SlidingWindowHAT_v1
 
 
 # Load CSV file
@@ -26,7 +26,8 @@ y = df[TARGET_COLUMN]  # Target column
 data_stream = stream.iter_pandas(X, y)
 
 #combined  custom classes 
-class HybridHAT(AdaptiveEntropyHAT, SlidingWindowHAT_v1):
+
+class HybridHAT(AdaptiveEntropyHAT):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
