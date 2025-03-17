@@ -24,7 +24,8 @@
   - **Resets subtrees** when **gradual attack pattern changes** are detected.  
   - **Built-in ADWIN** handles **instant pattern changes**.  
   - _(More details available on "Concept Drift" theory.)_  
-
+- **`recurrant_drift.py`** – Custom modification for handling **recurrant concept drift**:
+  - **`Re-trains model with old data`**  if accuracy of old data is over fixed threshold.
 ---
 
 ### ❌ **Redacted / Deprecated**
