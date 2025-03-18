@@ -9,7 +9,7 @@ from collections import defaultdict
 
 # Define interface and parameters
 INTERFACE = "Wi-Fi 2"
-CAPTURE_DURATION = 60
+CAPTURE_DURATION = 100
 OUTPUT_CSV = "captured_traffic_with_labels.csv"
 
 # Flow statistics storage
@@ -62,15 +62,22 @@ for thread in benign_threads:
     thread.start()
 
 # Packet processing function
+
 def process_packet(packet):
     global start_time
     try:
-        if hasattr(packet, "ip") and hasattr(packet, "transport_layer"):
-            src_ip = getattr(packet.ip, "src", None)
-            dst_ip = getattr(packet.ip, "dst", None)
+        if (hasattr(packet, "ip") or hasattr(packet, "ipv6")) and hasattr(packet, "transport_layer"):
+            
+            if hasattr(packet, "ip"):
+                src_ip = getattr(packet.ip, "src", None)
+                dst_ip = getattr(packet.ip, "dst", None)
+            else:
+                src_ip = getattr(packet.ipv6, "src", None)
+                dst_ip = getattr(packet.ipv6, "dst", None)
+            
             protocol = packet.transport_layer
             timestamp = float(packet.sniff_time.timestamp())
-
+            
             if hasattr(packet[protocol], "srcport") and hasattr(packet[protocol], "dstport"):
                 src_port = int(getattr(packet[protocol], "srcport", 0))
                 dst_port = int(getattr(packet[protocol], "dstport", 0))
@@ -87,34 +94,44 @@ def process_packet(packet):
                 last_time = flow_stats[flow_key]["Last Packet Time"]
                 flow_stats[flow_key]["Last Packet Time"] = timestamp
 
+                # Compute inter-arrival times
                 if last_time:
                     iat = timestamp - last_time
-                    if src_ip == packet.ip.src:
+                    if src_ip == getattr(packet, "ip", getattr(packet, "ipv6", None)).src:
                         flow_stats[flow_key]["Fwd IATs"].append(iat)
-                        flow_stats[flow_key]["act_data_pkt_fwd"] += 1
                     else:
                         flow_stats[flow_key]["Bwd IATs"].append(iat)
 
-                    if iat < 1.0:
-                        flow_stats[flow_key]["Active Times"].append(iat)
+                # Active and idle time calculation
+                if last_time:
+                    time_diff = timestamp - last_time
+                    if time_diff < 1:  # Active threshold
+                        flow_stats[flow_key]["Active Times"].append(time_diff)
                     else:
-                        flow_stats[flow_key]["Idle Times"].append(iat)
+                        flow_stats[flow_key]["Idle Times"].append(time_diff)
 
+                # Store forward and backward packet lengths
                 flow_stats[flow_key]["Packet Lengths"].append(pkt_length)
-                if src_ip == packet.ip.src:
+                if src_ip == getattr(packet, "ip", getattr(packet, "ipv6", None)).src:
                     flow_stats[flow_key]["Fwd Packet Lengths"].append(pkt_length)
                     flow_stats[flow_key]["Total Length of Fwd Packets"] += pkt_length
                     flow_stats[flow_key]["Subflow Fwd Bytes"] += pkt_length
+                    if hasattr(packet[protocol], "flags") and int(getattr(packet[protocol], "flags", "0"), 16) & 0x10:
+                        flow_stats[flow_key]["act_data_pkt_fwd"] += 1
                 else:
                     flow_stats[flow_key]["Total Backward Packets"] += 1
-
-                # Assign labels based on IP
+                
+                # **New: Detect SYN Flood Attack**
                 if src_ip == ATTACKER_IP:
                     flow_stats[flow_key]["Label"] = "attack"
-                elif src_ip in BENIGN_USERS:
+                else:
                     flow_stats[flow_key]["Label"] = "benign"
+
+                
+
     except Exception as e:
         print(f"Error processing packet: {e}")
+
 
 # Start capture
 print(f"Capturing on {INTERFACE} for {CAPTURE_DURATION} seconds...")

@@ -5,9 +5,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from preprocessing.entropy_adaptive import AdaptiveEntropyHAT
-from preprocessing.gradual_drift import SlidingWindowHAT_v1
-from preprocessing.recurrant_drift import RecurrentDriftMitigation
+from preprocessing import HybridHat
 
 
 # Load CSV file
@@ -28,21 +26,16 @@ data_stream = stream.iter_pandas(X, y)
 
 #combined  custom classes 
 
-class HybridHAT(AdaptiveEntropyHAT,SlidingWindowHAT_v1,RecurrentDriftMitigation):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+
 
 # Model save path
 MODEL_PATH = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\hat_model.pkl"
 
-# Check if a saved model exists
-try:
-    with open(MODEL_PATH, "rb") as f:
-        hat = pickle.load(f)
-    print("Loaded existing model from disk.")
-except FileNotFoundError:
-    hat = HybridHAT()
-    print("No existing model found. Training a new one.")
+# model training
+
+
+hat = HybridHat.HybridHAT() 
+print("No existing model found. Training a new one.")
 
 # Define accuracy metric
 accuracy = metrics.Accuracy()

@@ -4,13 +4,14 @@ import numpy as np
 import pickle
 from collections import defaultdict
 import time
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score 
-import sys
-import os
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import matplotlib.pyplot as plt
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score,
+    roc_curve, auc, precision_recall_curve, average_precision_score,
+    balanced_accuracy_score, confusion_matrix
+)
+from math import sqrt
 from preprocessing import HybridHat
-
 # Load trained model
 with open("hat_model.pkl", "rb") as f:
     hat = pickle.load(f)
@@ -40,22 +41,25 @@ flow_stats = defaultdict(lambda: {
 
 start_time = None
 
-# Packet processing function
 def process_packet(packet):
     global start_time
     try:
         if (hasattr(packet, "ip") or hasattr(packet, "ipv6")) and hasattr(packet, "transport_layer"):
-            
+
             if hasattr(packet, "ip"):
                 src_ip = getattr(packet.ip, "src", None)
                 dst_ip = getattr(packet.ip, "dst", None)
             else:
                 src_ip = getattr(packet.ipv6, "src", None)
                 dst_ip = getattr(packet.ipv6, "dst", None)
-            
+
+            # Ensure transport_layer is valid
             protocol = packet.transport_layer
+            if protocol is None:
+                return  # Skip packet if transport_layer is missing
+
             timestamp = float(packet.sniff_time.timestamp())
-            
+
             if hasattr(packet[protocol], "srcport") and hasattr(packet[protocol], "dstport"):
                 src_port = int(getattr(packet[protocol], "srcport", 0))
                 dst_port = int(getattr(packet[protocol], "dstport", 0))
@@ -65,6 +69,22 @@ def process_packet(packet):
                     start_time = timestamp
 
                 flow_key = (src_ip, src_port, dst_ip, dst_port, protocol)
+
+                if flow_key not in flow_stats:
+                    flow_stats[flow_key] = {
+                        "Start Time": None,
+                        "Last Packet Time": None,
+                        "Fwd IATs": [],
+                        "Bwd IATs": [],
+                        "Active Times": [],
+                        "Idle Times": [],
+                        "Packet Lengths": [],
+                        "Fwd Packet Lengths": [],
+                        "Total Length of Fwd Packets": 0,
+                        "Subflow Fwd Bytes": 0,
+                        "act_data_pkt_fwd": 0,
+                        "Total Backward Packets": 0
+                    }
 
                 if flow_stats[flow_key]["Start Time"] is None:
                     flow_stats[flow_key]["Start Time"] = timestamp
@@ -94,12 +114,19 @@ def process_packet(packet):
                     flow_stats[flow_key]["Fwd Packet Lengths"].append(pkt_length)
                     flow_stats[flow_key]["Total Length of Fwd Packets"] += pkt_length
                     flow_stats[flow_key]["Subflow Fwd Bytes"] += pkt_length
-                    if hasattr(packet[protocol], "flags") and int(getattr(packet[protocol], "flags", "0"), 16) & 0x10:
-                        flow_stats[flow_key]["act_data_pkt_fwd"] += 1
+
+                    # Check if flags attribute exists before accessing it
+                    if hasattr(packet[protocol], "flags"):
+                        flags = getattr(packet[protocol], "flags", None)
+                        if flags is not None and isinstance(flags, str) and int(flags, 16) & 0x10:
+                            flow_stats[flow_key]["act_data_pkt_fwd"] += 1
                 else:
                     flow_stats[flow_key]["Total Backward Packets"] += 1
+
     except Exception as e:
         print(f"Error processing packet: {e}")
+
+
 
 # Start capture
 print(f"Capturing on {INTERFACE} for {CAPTURE_DURATION} seconds...")
@@ -111,10 +138,8 @@ for packet in capture.sniff_continuously():
         break
     process_packet(packet)
 
-# Compute features
-data = []
+probabilities = []
 ground_truth = []
-predictions = []
 
 for flow_key, stats in flow_stats.items():
     src_ip = flow_key[0]  # Extract source IP
@@ -128,47 +153,61 @@ for flow_key, stats in flow_stats.items():
         "Fwd Packet Length Max": max(stats["Fwd Packet Lengths"]) if stats["Fwd Packet Lengths"] else 0,
         "Fwd Packet Length Mean": np.mean(stats["Fwd Packet Lengths"]) if stats["Fwd Packet Lengths"] else 0,
         "Packet Length Std": np.std(stats["Packet Lengths"]) if stats["Packet Lengths"] else 0,
-        "Packet Length Variance": np.var(stats["Packet Lengths"]) if stats["Packet Lengths"] else 0,
-        "Active Max": max(stats["Active Times"]) if stats["Active Times"] else 0,
         "Active Mean": np.mean(stats["Active Times"]) if stats["Active Times"] else 0,
-        "Idle Max": max(stats["Idle Times"]) if stats["Idle Times"] else 0,
         "Idle Mean": np.mean(stats["Idle Times"]) if stats["Idle Times"] else 0,
-        "Bwd IAT Max": max(stats["Bwd IATs"]) if stats["Bwd IATs"] else 0,
-        "Bwd IAT Std": np.std(stats["Bwd IATs"]) if stats["Bwd IATs"] else 0,
-        "Bwd IAT Total": sum(stats["Bwd IATs"]) if stats["Bwd IATs"] else 0,
-        "Avg Fwd Segment Size": np.mean(stats["Fwd Packet Lengths"]) if stats["Fwd Packet Lengths"] else 0,
-        "Subflow Fwd Bytes": stats["Subflow Fwd Bytes"],
         "Total Length of Fwd Packets": stats["Total Length of Fwd Packets"],
-        "Total Backward Packets": stats["Total Backward Packets"],
-        "act_data_pkt_fwd": stats["act_data_pkt_fwd"]
+        "Total Backward Packets": stats["Total Backward Packets"]
     }
 
-    # Get model prediction
-    prediction = hat.predict_one(feature_vector)
-    feature_vector["Prediction"] = prediction
-    data.append(feature_vector)
+    # Get model prediction probability
+    prob = hat.predict_proba_one(feature_vector)
+    attack_prob = prob.get("attack", 0.0)  # Probability of attack class
+    
+    probabilities.append(attack_prob)
 
     # Ground truth assignment
-    true_label = 0 if src_ip == "192.168.43.109" else 1  # 0 for benign, 1 for attack
+    true_label = 0 if src_ip == "172.20.189.54" else 1  # 0 for benign, 1 for attack
     ground_truth.append(true_label)
 
-    # Ensure model prediction is also numeric
-    prediction = 1 if hat.predict_one(feature_vector) == "attack" else 0
-    predictions.append(prediction)
+# Compute ROC curve
+fpr, tpr, _ = roc_curve(ground_truth, probabilities)
+roc_auc = auc(fpr, tpr)
 
-# Save to CSV
-df = pd.DataFrame(data)
-df.to_csv(OUTPUT_CSV, index=False, float_format="%.10f")
-print(f"Results saved to {OUTPUT_CSV}")
+# Compute PR curve and AUC-PR score
+precision, recall, _ = precision_recall_curve(ground_truth, probabilities)
+auc_pr = average_precision_score(ground_truth, probabilities)
 
 # Compute evaluation metrics
+predictions = [1 if p > 0.5 else 0 for p in probabilities]
 accuracy = accuracy_score(ground_truth, predictions)
-precision = precision_score(ground_truth, predictions)
-recall = recall_score(ground_truth, predictions)
+precision_score_value = precision_score(ground_truth, predictions)
+recall_score_value = recall_score(ground_truth, predictions)
 f1 = f1_score(ground_truth, predictions)
 
-# Print results
+# Compute confusion matrix values
+tn, fp, fn, tp = confusion_matrix(ground_truth, predictions).ravel()
+specificity = tn / (tn + fp)  # True Negative Rate
+g_mean = sqrt(recall_score_value * specificity)  # Geometric Mean
+balanced_accuracy = balanced_accuracy_score(ground_truth, predictions)  # Balanced Accuracy
+
+# Print metrics
+print(f"AUC-ROC: {roc_auc:.4f}")
+print(f"AUC-PR: {auc_pr:.4f}")
 print(f"Accuracy: {accuracy:.4f}")
-print(f"Precision: {precision:.4f}")
-print(f"Recall: {recall:.4f}")
+print(f"Precision: {precision_score_value:.4f}")
+print(f"Recall: {recall_score_value:.4f}")
 print(f"F1 Score: {f1:.4f}")
+print(f"Specificity: {specificity:.4f}")
+print(f"G-Mean: {g_mean:.4f}")
+print(f"Balanced Accuracy: {balanced_accuracy:.4f}")
+
+# Plot PR Curve
+'''
+plt.figure(figsize=(8, 6))
+plt.plot(recall, precision, color="red", lw=2, label=f"PR curve (AUC = {auc_pr:.2f})")
+plt.xlabel("Recall")
+plt.ylabel("Precision")
+plt.title("Precision-Recall Curve")
+plt.legend(loc="lower left")
+plt.show()'
+'''
