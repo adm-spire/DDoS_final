@@ -9,7 +9,7 @@ from collections import defaultdict
 
 # Define interface and parameters
 INTERFACE = "Wi-Fi 2"
-CAPTURE_DURATION = 100
+CAPTURE_DURATION = 200
 OUTPUT_CSV = "captured_traffic_with_labels.csv"
 
 # Flow statistics storage
@@ -31,11 +31,14 @@ flow_stats = defaultdict(lambda: {
 
 start_time = None
 
-ATTACKER_IP = "192.168.1.50"
-BENIGN_USERS = [  # Increased to 10 users
+ATTACKER_IP = "192.168.2.50"
+BENIGN_USERS = [  # Increased to 20 users
     "192.168.1.10", "192.168.1.20", "192.168.1.30", "192.168.1.40",
     "192.168.1.50", "192.168.1.60", "192.168.1.70", "192.168.1.80",
-    "192.168.1.90", "192.168.1.100"
+    "192.168.1.90", "192.168.1.100" , "192.168.1.110" , "192.168.1.120" , "192.168.1.130" , "192.168.1.140" ,
+    "192.168.1.150" , "192.168.1.160" , "192.168.1.170" , "192.168.1.180" , "192.168.1.190" , "192.168.1.200" , 
+    "192.168.1.210" , "192.168.1.220" , "192.168.1.230" , "192.168.1.240" ,
+    "192.168.1.250" , "192.168.2.100" , "192.168.2.110" , "192.168.2.120" , "192.168.2.130" , "192.168.2.130"
 ]
 
 def syn_flood(target_ip, target_port):

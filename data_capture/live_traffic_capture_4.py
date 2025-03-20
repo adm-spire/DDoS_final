@@ -10,6 +10,8 @@ from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_s
 import sys
 import os
 
+
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from preprocessing import HybridHat
 
@@ -22,10 +24,13 @@ print("Model loaded!")
 # Define interface and parameters
 INTERFACE = "Wi-Fi 2"
 CAPTURE_DURATION = 60
-OUTPUT_CSV = "captured_traffic_with_predictions.csv"
+OUTPUT_CSV = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\files\captured_traffic_with_predictions.csv"
 CONF_MATRIX_CSV = "confusion_matrix_data.csv"
 ROC_CSV = "roc_curve_data.csv"
 PRC_CSV = "prc_curve_data.csv"
+TARGET_IP = "192.168.43.108"
+
+bpf_filter =  f"udp and dst host {TARGET_IP}"
 
 # Flow statistics storage
 flow_stats = defaultdict(lambda: {
@@ -108,7 +113,7 @@ def process_packet(packet):
 
 # Start capture
 print(f"Capturing on {INTERFACE} for {CAPTURE_DURATION} seconds...")
-capture = pyshark.LiveCapture(interface=INTERFACE)
+capture = pyshark.LiveCapture(interface=INTERFACE,bpf_filter=bpf_filter)
 
 start_time = time.time()
 for packet in capture.sniff_continuously():
@@ -124,7 +129,22 @@ probs = []
 
 for flow_key, stats in flow_stats.items():
     src_ip = flow_key[0]
-    true_label = 0 if src_ip == "192.168.43.109" else 1
+    #benign = 0
+    #attack = 1
+    allowed_ips = {
+    "10.0.0.101",
+    "10.0.0.102",
+    "10.0.0.103",
+    "10.0.0.104",
+    "10.0.0.105",
+    "10.0.0.106",
+    "10.0.0.107",
+    "10.0.0.108",
+    "10.0.0.109",
+    "10.0.0.110"
+}
+
+    true_label = 1 if src_ip in allowed_ips else 0
     ground_truth.append(true_label)
 
     duration = max((stats["Last Packet Time"] - stats["Start Time"]), 1e-6)  # Prevent zero duration
@@ -133,33 +153,47 @@ for flow_key, stats in flow_stats.items():
         "Flow Duration": duration,
         "Flow Bytes/s": stats["Total Length of Fwd Packets"] / duration,
         "Flow Packets/s": len(stats["Packet Lengths"]) / duration,
-        "Fwd Packet Length Min": min(stats["Fwd Packet Lengths"]) if stats["Fwd Packet Lengths"] else 0,
-        "Fwd Packet Length Max": max(stats["Fwd Packet Lengths"]) if stats["Fwd Packet Lengths"] else 0,
-        "Fwd Packet Length Mean": np.mean(stats["Fwd Packet Lengths"]) if stats["Fwd Packet Lengths"] else 0,
-        "Packet Length Std": np.std(stats["Packet Lengths"]) if stats["Packet Lengths"] else 0,
-        "Packet Length Variance": np.var(stats["Packet Lengths"]) if stats["Packet Lengths"] else 0,
-        "Active Max": max(stats["Active Times"]) if stats["Active Times"] else 0,
-        "Active Mean": np.mean(stats["Active Times"]) if stats["Active Times"] else 0,
-        "Idle Max": max(stats["Idle Times"]) if stats["Idle Times"] else 0,
-        "Idle Mean": np.mean(stats["Idle Times"]) if stats["Idle Times"] else 0,
-        "Bwd IAT Max": max(stats["Bwd IATs"]) if stats["Bwd IATs"] else 0,
-        "Bwd IAT Std": np.std(stats["Bwd IATs"]) if stats["Bwd IATs"] else 0,
-        "Bwd IAT Total": sum(stats["Bwd IATs"]) if stats["Bwd IATs"] else 0,
-        "Avg Fwd Segment Size": np.mean(stats["Fwd Packet Lengths"]) if stats["Fwd Packet Lengths"] else 0,
-        "Subflow Fwd Bytes": stats["Subflow Fwd Bytes"],
         "Total Length of Fwd Packets": stats["Total Length of Fwd Packets"],
         "Total Backward Packets": stats["Total Backward Packets"],
-        "act_data_pkt_fwd": stats["act_data_pkt_fwd"]
+        "Subflow Fwd Bytes": stats["Subflow Fwd Bytes"],
+        "Fwd Packet Length Min": min(stats["Fwd Packet Lengths"], default=0),
+        "Fwd Packet Length Max": max(stats["Fwd Packet Lengths"], default=0),
+        "Fwd Packet Length Mean": np.mean(stats["Fwd Packet Lengths"]) if stats["Fwd Packet Lengths"] else 0,
+        "Packet Length Std": np.std(stats["Packet Lengths"], dtype=np.float64) if stats["Packet Lengths"] else 0,
+        "Packet Length Variance": np.var(stats["Packet Lengths"], dtype=np.float64) if stats["Packet Lengths"] else 0,
+        "Bwd IAT Max": max(stats["Bwd IATs"], default=0),
+        "Bwd IAT Std": np.std(stats["Bwd IATs"], dtype=np.float64) if stats["Bwd IATs"] else 0,
+        "Bwd IAT Total": sum(stats["Bwd IATs"]),
+        "Active Max": max(stats["Active Times"], default=0),
+        "Active Mean": np.mean(stats["Active Times"], dtype=np.float64) if stats["Active Times"] else 0,
+        "Idle Max": max(stats["Idle Times"], default=0),
+        "Idle Mean": np.mean(stats["Idle Times"], dtype=np.float64) if stats["Idle Times"] else 0,
+        "act_data_pkt_fwd": stats["act_data_pkt_fwd"],
     }
 
     prediction_prob = hat.predict_proba_one(feature_vector)  # Returns a dictionary
 
-    # Extract the probability of the "attack" class (adjust the key if necessary)
+    # Extract the probability of the "attack" class 
     attack_prob = prediction_prob.get("attack", 0)  # Default to 0 if key is missing
 
-    prediction = 1 if attack_prob > 0.5 else 0  # Thresholding
+    prediction = 1 if attack_prob > 0.8 else 0  # Thresholding
+
+    if prediction == 1:
+        feature_vector["Prediction"] = "attack"
+    else:
+        feature_vector["Prediction"] = "benign"
+
+
+    feature_vector["Attack Probability"] = attack_prob
+    feature_vector["source_ip"] = src_ip
+
     predictions.append(prediction)
     probs.append(attack_prob)  # Store probability for ROC/PRC curves
+
+    
+
+    # Append feature vector to `data`
+    data.append(feature_vector)
 
 
 # Save results
@@ -204,6 +238,11 @@ print(f"AUC-PRC: {auc_prc:.4f}")
 print(f"Confusion Matrix saved to {CONF_MATRIX_CSV}")
 print(f"ROC curve data saved to {ROC_CSV}")
 print(f"PRC curve data saved to {PRC_CSV}")
+
+
+
+
+
 
 
 
