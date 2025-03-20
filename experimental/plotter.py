@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # File paths
-CONF_MATRIX_CSV = "confusion_matrix.csv"
-ROC_CSV = "roc_curve.csv"
-PRC_CSV = "prc_curve.csv"
+CONF_MATRIX_CSV = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\files\confusion.csv"
+ROC_CSV = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\files\roc.csv"
+PRC_CSV = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\files\prc.csv"
 
 # Load confusion matrix
 df_conf_matrix = pd.read_csv(CONF_MATRIX_CSV, index_col=0)
