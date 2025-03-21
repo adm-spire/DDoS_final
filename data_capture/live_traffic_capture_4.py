@@ -30,7 +30,8 @@ ROC_CSV = "roc_curve_data.csv"
 PRC_CSV = "prc_curve_data.csv"
 TARGET_IP = "192.168.43.108"
 
-bpf_filter =  f"udp and dst host {TARGET_IP}"
+bpf_filter = f"(udp or (tcp and tcp[tcpflags] & tcp-syn != 0)) and dst host {TARGET_IP}"
+
 
 # Flow statistics storage
 flow_stats = defaultdict(lambda: {
@@ -131,20 +132,9 @@ for flow_key, stats in flow_stats.items():
     src_ip = flow_key[0]
     #benign = 0
     #attack = 1
-    allowed_ips = {
-    "10.0.0.101",
-    "10.0.0.102",
-    "10.0.0.103",
-    "10.0.0.104",
-    "10.0.0.105",
-    "10.0.0.106",
-    "10.0.0.107",
-    "10.0.0.108",
-    "10.0.0.109",
-    "10.0.0.110"
-}
+  
 
-    true_label = 1 if src_ip in allowed_ips else 0
+    true_label = 0 if src_ip == "192.168.43.109" else 1
     ground_truth.append(true_label)
 
     duration = max((stats["Last Packet Time"] - stats["Start Time"]), 1e-6)  # Prevent zero duration
@@ -238,6 +228,16 @@ print(f"AUC-PRC: {auc_prc:.4f}")
 print(f"Confusion Matrix saved to {CONF_MATRIX_CSV}")
 print(f"ROC curve data saved to {ROC_CSV}")
 print(f"PRC curve data saved to {PRC_CSV}")
+
+
+
+
+
+
+
+
+
+
 
 
 
