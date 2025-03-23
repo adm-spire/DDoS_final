@@ -37,17 +37,25 @@ MODEL_PATH = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\hat_model.pkl"
 hat = HybridHat.HybridHAT() 
 print("No existing model found. Training a new one.")
 
-# Define accuracy metric
+# Define multiple metrics
 accuracy = metrics.Accuracy()
+
 
 # Train model incrementally
 for x, y_true in data_stream:
     y_pred = hat.predict_one(x)  # Predict before training
     hat.learn_one(x, y_true)  # Train the model incrementally
-    accuracy.update(y_true, y_pred)  # Update accuracy metric
+    
+    # Update all metrics
+    accuracy.update(y_true, y_pred)
+    
+    
 
-# Print final accuracy
+
+# Print final metrics
 print(f"Final Accuracy: {accuracy.get():.4f}")
+
+
 
 # Save the trained model using pickle
 with open(MODEL_PATH, "wb") as f:

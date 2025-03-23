@@ -30,61 +30,67 @@ ROC_CSV = "roc_curve_data.csv"
 PRC_CSV = "prc_curve_data.csv"
 TARGET_IP = "192.168.43.108"
 
-bpf_filter = f"(udp or (tcp and tcp[tcpflags] & tcp-syn != 0)) and dst host {TARGET_IP}"
+
 
 
 # Flow statistics storage
 flow_stats = defaultdict(lambda: {
     "Start Time": None,
     "Last Packet Time": None,
-    "Total Length of Fwd Packets": 0,
-    "Total Backward Packets": 0,
-    "Fwd Packet Lengths": [],
-    "Packet Lengths": [],
     "Fwd IATs": [],
     "Bwd IATs": [],
     "Active Times": [],
     "Idle Times": [],
+    "Packet Lengths": [],
+    "Fwd Packet Lengths": [],
+    "Bwd Packet Lengths": [],
+    "Total Length of Fwd Packets": 0,
+    "Total Length of Bwd Packets": 0,
+    "Subflow Fwd Bytes": 0,
+    "Subflow Bwd Bytes": 0,
+    "Fwd Packets": 0,
+    "Bwd Packets": 0,
+    "Fwd Push Flags": 0,
+    "Bwd Push Flags": 0,
     "act_data_pkt_fwd": 0,
-    "Subflow Fwd Bytes": 0
+    "Label": "benign"
 })
-
 start_time = None
 
 # Packet processing function
 def process_packet(packet):
-    global start_time
     try:
         if (hasattr(packet, "ip") or hasattr(packet, "ipv6")) and hasattr(packet, "transport_layer"):
-            
             if hasattr(packet, "ip"):
                 src_ip = getattr(packet.ip, "src", None)
                 dst_ip = getattr(packet.ip, "dst", None)
             else:
                 src_ip = getattr(packet.ipv6, "src", None)
                 dst_ip = getattr(packet.ipv6, "dst", None)
-            
+
             protocol = packet.transport_layer
             timestamp = float(packet.sniff_time.timestamp())
-            
+
             if hasattr(packet[protocol], "srcport") and hasattr(packet[protocol], "dstport"):
                 src_port = int(getattr(packet[protocol], "srcport", 0))
                 dst_port = int(getattr(packet[protocol], "dstport", 0))
                 pkt_length = int(getattr(packet, "length", 0))
 
-                if start_time is None:
-                    start_time = timestamp
-
                 flow_key = (src_ip, src_port, dst_ip, dst_port, protocol)
 
+                # Initialize Start Time only for the first packet of the flow
                 if flow_stats[flow_key]["Start Time"] is None:
                     flow_stats[flow_key]["Start Time"] = timestamp
+                    flow_stats[flow_key]["Last Packet Time"] = timestamp
+                    #print(f"Flow {flow_key}: Start Time set to {timestamp}")
 
+                # Update Last Packet Time for subsequent packets
                 last_time = flow_stats[flow_key]["Last Packet Time"]
                 flow_stats[flow_key]["Last Packet Time"] = timestamp
 
                 # Compute inter-arrival times
                 if last_time:
+                    
                     iat = timestamp - last_time
                     if src_ip == getattr(packet, "ip", getattr(packet, "ipv6", None)).src:
                         flow_stats[flow_key]["Fwd IATs"].append(iat)
@@ -93,6 +99,7 @@ def process_packet(packet):
 
                 # Active and idle time calculation
                 if last_time:
+                    
                     time_diff = timestamp - last_time
                     if time_diff < 1:  # Active threshold
                         flow_stats[flow_key]["Active Times"].append(time_diff)
@@ -105,16 +112,25 @@ def process_packet(packet):
                     flow_stats[flow_key]["Fwd Packet Lengths"].append(pkt_length)
                     flow_stats[flow_key]["Total Length of Fwd Packets"] += pkt_length
                     flow_stats[flow_key]["Subflow Fwd Bytes"] += pkt_length
-                    if hasattr(packet[protocol], "flags") and int(getattr(packet[protocol], "flags", "0"), 16) & 0x10:
-                        flow_stats[flow_key]["act_data_pkt_fwd"] += 1
+                    flow_stats[flow_key]["Fwd Packets"] += 1
+                    if hasattr(packet[protocol], "flags") and int(getattr(packet[protocol], "flags", "0"), 16) & 0x08:
+                        flow_stats[flow_key]["Fwd Push Flags"] += 1
                 else:
-                    flow_stats[flow_key]["Total Backward Packets"] += 1
+                    flow_stats[flow_key]["Bwd Packet Lengths"].append(pkt_length)
+                    flow_stats[flow_key]["Total Length of Bwd Packets"] += pkt_length
+                    flow_stats[flow_key]["Subflow Bwd Bytes"] += pkt_length
+                    flow_stats[flow_key]["Bwd Packets"] += 1
+                    if hasattr(packet[protocol], "flags") and int(getattr(packet[protocol], "flags", "0"), 16) & 0x08:
+                        flow_stats[flow_key]["Bwd Push Flags"] += 1
+
+               
+
     except Exception as e:
         print(f"Error processing packet: {e}")
 
 # Start capture
 print(f"Capturing on {INTERFACE} for {CAPTURE_DURATION} seconds...")
-capture = pyshark.LiveCapture(interface=INTERFACE,bpf_filter=bpf_filter)
+capture = pyshark.LiveCapture(interface=INTERFACE,bpf_filter="tcp or udp")
 
 start_time = time.time()
 for packet in capture.sniff_continuously():
@@ -128,38 +144,47 @@ ground_truth = []
 predictions = []
 probs = []
 
+BENIGN_USERS = {
+    "192.168.1.10", "192.168.1.20", "192.168.1.30", "192.168.1.40",
+    "192.168.1.50", "192.168.1.60", "192.168.1.70", "192.168.1.80",
+    "192.168.1.90", "192.168.1.100"
+}
+
 for flow_key, stats in flow_stats.items():
     src_ip = flow_key[0]
     #benign = 0
     #attack = 1
   
 
-    true_label = 0 if src_ip == "192.168.43.109" else 1
+    true_label = 0 if src_ip in BENIGN_USERS else 1
     ground_truth.append(true_label)
 
-    duration = max((stats["Last Packet Time"] - stats["Start Time"]), 1e-6)  # Prevent zero duration
+    
 
+for flow_key, stats in flow_stats.items():
+    duration = max((stats["Last Packet Time"] - stats["Start Time"]), 1e-10)
+    #print(f"Flow {flow_key}: Start Time = {flow_stats[flow_key]['Start Time']}, Last Packet Time = {flow_stats[flow_key]['Last Packet Time']}, Duration = {duration}")
     feature_vector = {
-        "Flow Duration": duration,
-        "Flow Bytes/s": stats["Total Length of Fwd Packets"] / duration,
-        "Flow Packets/s": len(stats["Packet Lengths"]) / duration,
-        "Total Length of Fwd Packets": stats["Total Length of Fwd Packets"],
-        "Total Backward Packets": stats["Total Backward Packets"],
-        "Subflow Fwd Bytes": stats["Subflow Fwd Bytes"],
-        "Fwd Packet Length Min": min(stats["Fwd Packet Lengths"], default=0),
-        "Fwd Packet Length Max": max(stats["Fwd Packet Lengths"], default=0),
-        "Fwd Packet Length Mean": np.mean(stats["Fwd Packet Lengths"]) if stats["Fwd Packet Lengths"] else 0,
-        "Packet Length Std": np.std(stats["Packet Lengths"], dtype=np.float64) if stats["Packet Lengths"] else 0,
-        "Packet Length Variance": np.var(stats["Packet Lengths"], dtype=np.float64) if stats["Packet Lengths"] else 0,
-        "Bwd IAT Max": max(stats["Bwd IATs"], default=0),
-        "Bwd IAT Std": np.std(stats["Bwd IATs"], dtype=np.float64) if stats["Bwd IATs"] else 0,
-        "Bwd IAT Total": sum(stats["Bwd IATs"]),
-        "Active Max": max(stats["Active Times"], default=0),
-        "Active Mean": np.mean(stats["Active Times"], dtype=np.float64) if stats["Active Times"] else 0,
-        "Idle Max": max(stats["Idle Times"], default=0),
-        "Idle Mean": np.mean(stats["Idle Times"], dtype=np.float64) if stats["Idle Times"] else 0,
-        "act_data_pkt_fwd": stats["act_data_pkt_fwd"],
-    }
+            "Flow Duration": duration,
+            "Flow Bytes/s": (stats["Total Length of Fwd Packets"] + stats["Total Length of Bwd Packets"]) / duration,
+            "Flow Packets/s": (stats["Fwd Packets"] + stats["Bwd Packets"]) / duration,
+            "Total Fwd Packets": stats["Fwd Packets"],
+            "Total Bwd Packets": stats["Bwd Packets"],
+            "Fwd Packet Length Min": min(stats["Fwd Packet Lengths"], default=0),
+            "Fwd Packet Length Max": max(stats["Fwd Packet Lengths"], default=0),
+            "Fwd Packet Length Mean": np.mean(stats["Fwd Packet Lengths"]) if stats["Fwd Packet Lengths"] else 0,
+            "Bwd Packet Length Min": min(stats["Bwd Packet Lengths"], default=0),
+            "Bwd Packet Length Max": max(stats["Bwd Packet Lengths"], default=0),
+            "Bwd Packet Length Mean": np.mean(stats["Bwd Packet Lengths"]) if stats["Bwd Packet Lengths"] else 0,
+            "Fwd IAT Mean": np.mean(stats["Fwd IATs"]) if stats["Fwd IATs"] else 0,
+            "Fwd IAT Std": np.std(stats["Fwd IATs"]) if stats["Fwd IATs"] else 0,
+            "Bwd IAT Mean": np.mean(stats["Bwd IATs"]) if stats["Bwd IATs"] else 0,
+            "Active Std": np.std(stats["Active Times"]) if stats["Active Times"] else 0,
+            "Idle Std": np.std(stats["Idle Times"]) if stats["Idle Times"] else 0,
+            "Fwd Push Flags Count": stats["Fwd Push Flags"],
+            "Bwd Push Flags Count": stats["Bwd Push Flags"],
+            "Label": stats["Label"]
+        }
 
     prediction_prob = hat.predict_proba_one(feature_vector)  # Returns a dictionary
 
