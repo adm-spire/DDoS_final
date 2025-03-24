@@ -67,6 +67,9 @@ def process_packet(packet):
             else:
                 src_ip = getattr(packet.ipv6, "src", None)
                 dst_ip = getattr(packet.ipv6, "dst", None)
+            # Drop packets that are neither from nor to the target IP
+            if src_ip != TARGET_IP and dst_ip != TARGET_IP:
+                return 
 
             protocol = packet.transport_layer
             timestamp = float(packet.sniff_time.timestamp())

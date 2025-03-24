@@ -32,7 +32,7 @@ flow_stats = defaultdict(lambda: {
     "Fwd Push Flags": 0,
     "Bwd Push Flags": 0,
     "act_data_pkt_fwd": 0,
-    "Label": "benign"
+    "Label": "nil"
 })
 
 # Target
@@ -76,7 +76,7 @@ def syn_flood():
         packet = ip / tcp / payload
         scapy.send(packet, verbose=False)
         print(f"Attack IP {src_ip} sent a request")
-        time.sleep(random.uniform(0.08, 0.2))
+        time.sleep(random.uniform(2,3 ))
 
     print("SYN Flood attack stopped.")
 
@@ -98,7 +98,7 @@ def benign_traffic():
             scapy.send(packet, verbose=False)
 
             print(f"Benign IP {selected_ip} sent a request")
-            time.sleep(random.uniform(0.2, 0.5))
+            time.sleep(random.uniform(0.01, 0.1))
 
         print(f"Switching benign IP from {selected_ip} to a new one.")
 
@@ -126,6 +126,9 @@ def process_packet(packet):
             else:
                 src_ip = getattr(packet.ipv6, "src", None)
                 dst_ip = getattr(packet.ipv6, "dst", None)
+            # Drop packets that are neither from nor to the target IP
+            if src_ip != TARGET_IP and dst_ip != TARGET_IP:
+                return 
 
             protocol = packet.transport_layer
             timestamp = float(packet.sniff_time.timestamp())
@@ -185,7 +188,7 @@ def process_packet(packet):
                 # **New: Detect SYN Flood Attack**
                 if src_ip in BENIGN_USERS:
                     flow_stats[flow_key]["Label"] = "benign"
-                else:
+                elif(src_ip not in BENIGN_USERS and dst_ip == TARGET_IP):
                     flow_stats[flow_key]["Label"] = "attack"
 
     except Exception as e:

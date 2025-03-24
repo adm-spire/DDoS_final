@@ -3,17 +3,21 @@
 ## 📂 **File Description**
 
 ### 📡 **Data Capture**
-- **`attack.py`** – Performs a **SYN flood attack** on the target.  
-- **`attack2.py`** – Executes a **Slowloris attack** on the target.  
+- **`attack.py`** – Performs a **SYN flood attack with different flags and payload sizes** on the target.  
+- **`attack2.py`** – Executes a **Simple SYN Flood attack** on the target.  
 - **`benign.py`** – Sends **simple TCP/UDP packets** to the target (benign traffic).  
-- **`live_target_capture_2.py`** – **Old version** of the main program for real-time predictions on network traffic.  
-- **`live_target_capture_3.py`** – **New version** of the main program with **accuracy, precision, recall, and F1-score** calculations.  
+ 
+- **`live_target_capture_4.py`** – **New version** of the main program with **accuracy, precision, recall, and F1-score and other metrics** calculations.  
 - **`training_data_capture.py`** – Generates training data using a combination of **benign and attack traffic** and saves it as a **CSV file**.  
 
 ---
 
 ### 🔬 **Experimental**
 - **`label_counter.py`** – Non-essential script used for analyzing the composition of predicted results.  
+- **`confusion.py`** – Non-essential script used for plotting confusion matrix.
+- **`extra_trees.py.py`** –  script used for analyzing the importances of features in dataset.
+- **`filter.py`** – Non-essential script used for removing incorrect traffic from dataset.
+- **`plotter.py`** –  used for drawing ROC and PRC curves.        
 
 ---
 
@@ -24,8 +28,7 @@
   - **Resets subtrees** when **gradual attack pattern changes** are detected.  
   - **Built-in ADWIN** handles **instant pattern changes**.  
   - _(More details available on "Concept Drift" theory.)_  
-- **`recurrant_drift.py`** – Custom modification for handling **recurrant concept drift**:
-  - **`Re-trains model with old data`**  if accuracy of old data is over fixed threshold.
+
 ---
 
 ### ❌ **Redacted / Deprecated**

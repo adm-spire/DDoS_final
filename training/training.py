@@ -9,7 +9,7 @@ from preprocessing import HybridHat
 
 
 # Load CSV file
-CSV_FILE = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\captured_traffic_with_labels.csv"  # CSV file
+CSV_FILE = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\captured_traffic_with_labels_2.csv"  # CSV file
 
 # Define the target column 
 TARGET_COLUMN = "Label"  # target column
