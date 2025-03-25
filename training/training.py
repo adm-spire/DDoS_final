@@ -1,6 +1,6 @@
 import pandas as pd
 import pickle
-from river import stream, tree, metrics
+from river import stream, tree, metrics 
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -29,11 +29,11 @@ data_stream = stream.iter_pandas(X, y)
 
 
 # Model save path
-MODEL_PATH = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\hat_model.pkl"
+MODEL_PATH = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\hat_model_2.pkl"
 
 # model training
 
-
+#hat = tree.HoeffdingAdaptiveTreeClassifier()
 hat = HybridHat.HybridHAT() 
 print("No existing model found. Training a new one.")
 
