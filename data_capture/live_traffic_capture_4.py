@@ -232,16 +232,51 @@ precision = precision_score(ground_truth, predictions)
 recall = recall_score(ground_truth, predictions)
 f1 = f1_score(ground_truth, predictions)
 
-# Save confusion matrix data
 pd.DataFrame(conf_matrix, index=["Actual 0", "Actual 1"], columns=["Predicted 0", "Predicted 1"]).to_csv(CONF_MATRIX_CSV)
 
-# Compute and save ROC curve
-fpr, tpr, thresholds = roc_curve(ground_truth, probs)
-pd.DataFrame({"FPR": fpr, "TPR": tpr, "Thresholds": thresholds}).to_csv(ROC_CSV, index=False)
+# Ensure predictions and ground_truth are NumPy arrays
+predictions = np.array(predictions)  # Convert to NumPy array if not already
+ground_truth = np.array(ground_truth)  # Convert to NumPy array if not already
 
-# Compute and save PRC curve
-precisions, recalls, prc_thresholds = precision_recall_curve(ground_truth, probs)
-pd.DataFrame({"Precision": precisions, "Recall": recalls, "Thresholds": np.append(prc_thresholds, np.nan)}).to_csv(PRC_CSV, index=False)
+window_size = 100  # Define a window for moving accuracy
+
+# Compute rolling accuracy safely
+rolling_accuracy = [
+    np.mean(predictions[max(0, i - window_size): i]) if i >= window_size else np.nan
+    for i in range(len(predictions))
+]
+
+# Compute rolling precision, recall, and F1-score safely
+rolling_precision = [
+    precision_score(ground_truth[:i], predictions[:i], zero_division=0) if i > 0 else np.nan
+    for i in range(len(predictions))
+]
+
+rolling_recall = [
+    recall_score(ground_truth[:i], predictions[:i], zero_division=0) if i > 0 else np.nan
+    for i in range(len(predictions))
+]
+
+rolling_f1 = [
+    f1_score(ground_truth[:i], predictions[:i], zero_division=0) if i > 0 else np.nan
+    for i in range(len(predictions))
+]
+
+
+
+
+# Save rolling metrics to CSV
+rolling_metrics = pd.DataFrame({
+    "Index": list(range(len(predictions))),
+    "Rolling Accuracy": rolling_accuracy,
+    "Rolling Precision": rolling_precision,
+    "Rolling Recall": rolling_recall,
+    "Rolling F1-Score": rolling_f1
+})
+rolling_metrics.to_csv("rolling_metrics.csv", index=False)
+
+
+
 
 # Print results
 print(f"Accuracy: {accuracy:.4f}")
@@ -254,8 +289,8 @@ print(f"G-Mean: {g_mean:.4f}")
 print(f"AUC-ROC: {auc_roc:.4f}")
 print(f"AUC-PRC: {auc_prc:.4f}")
 print(f"Confusion Matrix saved to {CONF_MATRIX_CSV}")
-print(f"ROC curve data saved to {ROC_CSV}")
-print(f"PRC curve data saved to {PRC_CSV}")
+print("Rolling metrics  saved to CSV.")
+
 
 
 

@@ -9,7 +9,7 @@ from preprocessing import HybridHat
 
 
 # Load CSV file
-CSV_FILE = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\captured_traffic_with_labels_2.csv"  # CSV file
+CSV_FILE = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\captured_traffic_with_labels.csv"  # CSV file
 
 # Define the target column 
 TARGET_COLUMN = "Label"  # target column
@@ -29,7 +29,7 @@ data_stream = stream.iter_pandas(X, y)
 
 
 # Model save path
-MODEL_PATH = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\hat_model_2.pkl"
+MODEL_PATH = r"C:\Users\rauna\OneDrive\Desktop\ddos_final\hat_model.pkl"
 
 # model training
 

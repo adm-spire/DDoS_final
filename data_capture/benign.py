@@ -7,8 +7,8 @@ import scapy.all as scapy
 # Target
 TARGET_IP = "192.168.43.108"
 MESSAGE = "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
-MIN_DELAY = 0.01
-MAX_DELAY = 0.1  # Randomized delay range
+MIN_DELAY = 0.1
+MAX_DELAY = 1  # Randomized delay range
 
 # Fixed benign IPs
 BENIGN_IPS = [
@@ -30,6 +30,7 @@ def send_tcp_request():
         while time.time() - start_time < BENIGN_SESSION_TIME:
             try:
                 sport = random.randint(1024, 1040)  # Random source port
+                
 
                 # Construct TCP packet with Scapy
                 ip = scapy.IP(src=selected_ip, dst=TARGET_IP)
