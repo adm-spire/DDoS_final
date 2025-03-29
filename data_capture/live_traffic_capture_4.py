@@ -153,18 +153,19 @@ BENIGN_USERS = {
     "192.168.1.90", "192.168.1.100"
 }
 
+
+    
+
+    
+
 for flow_key, stats in flow_stats.items():
     src_ip = flow_key[0]
     #benign = 0
     #attack = 1
   
 
-    true_label = 0 if src_ip in BENIGN_USERS else 1
+    true_label = 0 if src_ip in BENIGN_USERS or src_ip == TARGET_IP else 1
     ground_truth.append(true_label)
-
-    
-
-for flow_key, stats in flow_stats.items():
     duration = max((stats["Last Packet Time"] - stats["Start Time"]), 1e-10)
     #print(f"Flow {flow_key}: Start Time = {flow_stats[flow_key]['Start Time']}, Last Packet Time = {flow_stats[flow_key]['Last Packet Time']}, Duration = {duration}")
     feature_vector = {
@@ -188,11 +189,14 @@ for flow_key, stats in flow_stats.items():
             "Bwd Push Flags Count": stats["Bwd Push Flags"],
             "Label": stats["Label"]
         }
-
-    prediction_prob = hat.predict_proba_one(feature_vector)  # Returns a dictionary
+    
+    if src_ip != TARGET_IP:
+        prediction_prob = hat.predict_proba_one(feature_vector)  # Returns a dictionary
 
     # Extract the probability of the "attack" class 
-    attack_prob = prediction_prob.get("attack", 0)  # Default to 0 if key is missing
+        attack_prob = prediction_prob.get("attack", 0)  # Default to 0 if key is missing
+    else:
+        attack_prob = 0
 
     prediction = 1 if attack_prob > 0.8 else 0  # Thresholding
 
@@ -201,13 +205,16 @@ for flow_key, stats in flow_stats.items():
     else:
         feature_vector["Prediction"] = "benign"
 
-
+    if src_ip == TARGET_IP:
+        prediction = 0
+    
     feature_vector["Attack Probability"] = attack_prob
-    feature_vector["source_ip"] = src_ip
+    feature_vector["source_ip"] = flow_key
+
 
     predictions.append(prediction)
     probs.append(attack_prob)  # Store probability for ROC/PRC curves
-
+    
     
 
     # Append feature vector to `data`

