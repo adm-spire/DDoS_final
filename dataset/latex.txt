@@ -1,0 +1,559 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{An Adaptive VFDT Based Approach For Detecting DDoS attacks on IoT Networks\\
+}
+
+\author{\IEEEauthorblockN{ Raunaq Singh}
+\IEEEauthorblockA{\textit{Dept of Computer Science} \\
+\textit{Vellore Institute of Technology}\\
+Chennai , India \\
+}
+\and
+\IEEEauthorblockN{Kushal Sultania}
+\IEEEauthorblockA{\textit{Dept of Computer Science} \\
+\textit{Vellore Institute of Technology}\\
+Chennai , India \\
+}
+\and
+\IEEEauthorblockN{N Nitin}
+\IEEEauthorblockA{\textit{Dept of Computer Science} \\
+\textit{Vellore Institute of Technology}\\
+Chennai, India \\
+}
+
+}
+
+\maketitle
+
+\begin{abstract}
+With the increasing adoption of IoT devices, securing networks from Distributed Denial of Service (DDoS) attacks has become critical. Traditional anomaly detection methods struggle with the high-velocity, streaming nature of IoT data. This paper presents Adaptive Entropy HAT, an enhancement of the Hoeffding Adaptive Tree (HAT) classifier, designed for real-time DDoS detection in IoT environments. The proposed model integrates an entropy-based splitting criterion with adaptive feature selection to dynamically prioritize influential features. A decay-based feature weighting mechanism ensures that outdated feature importance does not dominate decision-making, improving adaptability to evolving attack patterns. Experimental evaluations demonstrate that Adaptive Entropy HAT enhances detection accuracy while maintaining low computational overhead, making it suitable for real-time deployment on resource-constrained IoT devices.
+
+\end{abstract}
+
+\begin{IEEEkeywords}
+Distributed Denial of Service (DDoS) , Hoeffding Adaptive Tree , Entropy , Internet of Things (IoT)
+\end{IEEEkeywords}
+
+\section{Introduction}
+The rapid proliferation of Internet of Things (IoT) devices and Flying Ad Hoc Networks (FANETs) has revolutionized various domains, including smart cities, industrial automation, and defense applications. These resource-constrained devices operate in highly dynamic environments and communicate over wireless networks, making them particularly vulnerable to cyber threats. Among these, Distributed Denial of Service (DDoS) attacks [1] pose a significant challenge, disrupting network availability by overwhelming devices with excessive traffic.
+
+DDoS attacks on IoT and FANET-based systems can have severe consequences. In smart infrastructure, they can cripple essential services such as traffic management, power grids, and healthcare monitoring systems, leading to economic and human losses. In military and disaster-response FANETs, targeted attacks can render drone swarms inoperative, leading to mission failures and security breaches [2]. The low computational capacity of IoT and FANET nodes further exacerbates the problem, as traditional security mechanisms are often infeasible due to their high processing and storage requirements [3] .
+
+Existing DDoS detection techniques rely heavily on signature-based or anomaly-based methods. However, signature-based approaches struggle to detect zero-day attacks, while anomaly-based methods face challenges in real-time decision-making due to the high velocity of incoming data [4][5]. To address these limitations, stream-based learning models such as Very Fast Decision Trees (VFDT) have emerged as promising solutions. These models can continuously learn from network traffic in an online manner, making them well-suited for real-time intrusion detection in IoT and FANET environments [6].
+
+In this paper, we propose Adaptive Entropy HAT, an enhancement of the Hoeffding Adaptive Tree (HAT) classifier, specifically designed for real-time DDoS detection. The key contributions of this work are:
+
+Entropy-based splitting criterion: Improving decision-making by prioritizing splits that maximize information gain.
+
+Adaptive feature selection: Dynamically adjusting feature importance using a decay-based weighting mechanism, ensuring the model adapts to evolving attack patterns.
+
+Lightweight real-time detection: Optimizing the model for resource-constrained IoT and FANET devices while maintaining high detection accuracy.
+
+To evaluate the effectiveness of real-time DDoS detection on resource-constrained IoT hardware, we generated our own attack traffic instead of relying on existing datasets. Public datasets such as CIC-DDoS2019 are often highly imbalanced, with benign traffic vastly outnumbering attack samples. Sampling these datasets to balance classes can distort key temporal features, such as Inter-Arrival Time (IAT) statistics, which are critical for real-world attack detection. By generating our own traffic, we ensured a more controlled and realistic assessment of the proposed method’s performance in an IoT setting. The attack traffic includes:
+
+(1) TCP SYN Flood with Stealth Variations: A multi-threaded SYN flood attack was implemented using Scapy, where each packet had a spoofed source IP address and random TCP flags (SYN, SYN-ACK, RST) to evade detection. Additionally, random payloads were added to increase entropy and mimic real-world attack behavior.
+
+(2) UDP Flood with Pulsing Strategy: A UDP flood attack was launched using predefined source IPs from an IP cycling list to simulate botnet-based attack patterns. The attack was executed in short bursts, mimicking real-world low-rate pulsing DDoS attacks to evade traditional threshold-based detection.
+
+\section{Related Work}
+
+Devrim et al. [7] used various models based on Deep Neural Networks (DNN), Convolutional Neural Networks (CNN), and Long Short Term Memory (LSTM) have been evaluated in terms of detection performance and real-time performance.
+The tests suggest that the proposed model has in general higher response 
+time when compared to baseline models like DNN. 
+
+H. J. Hadi et al. [8] presented a unique real dataset having more than 5.6 million data samples for DDoS was generated with the help of multi simulators 
+in a network. The size of the sample is enough to satisfy any anomaly detection mode for training efficiently to detect aforementioned attacks. The attack diversity shown by the dataset was created by thousand spoofed attackers and with 10 Gbps traffic. The downside is that Models trained on such dataset may fail zero day attacks , custom datasets might be needed for practical use cases.  
+
+Haiping Lin et al. [9] It discusses various issues regarding the studied fuzzy network anomaly detection schemes. For this purpose, several charts regarding the various features of the studied schemes have been presented, providing useful insight into the studied schemes and further illuminating future research directions and possible open issues.  As shown , fuzzy classifiers and fuzzy clustering techniques are benefited in the investigated schemes to deal with anomalies. Only a few anomaly detection approaches have focused on dealing with imbalanced datasets, but this issue should be investigated further and handled in the future. A real-time anomaly detection approach should run-time have low complexity. Thus exploring new and low-overhead methods should be investigated in the future.
+
+Sharmin Aktar et al. [10] used  Deep Contractive Autoencoder (DCAE), containing  two encoder and decoder layers, to learn the representations 
+of the network sample in a semi-supervised manner . AE-based techniques may 
+also produce alarms, false particularly when the attack is similar to normal 
+network traffic. In the case of using non optimal hyperparameters of the 
+AE-based techniques, the accuracy significantly can drop. 
+
+Meddeb, R. et al [11] utilized an approach which comprises 
+several components, including the data collection training module that gathers network traffic data, the attack signatures generation module that analyzes the collected data against suspicious activities and defines class labels, and the stacked autoencoder module that obtains relevant features 
+using Dimensionality Reduction techniques. DNN  face a higher risk of 
+overfitting, require a much larger volume of data for training. the impact of the unbalanced dataset needs to be considered in future studies.
+
+N. A. Al-Khulaidi et al. [12] analysed algorithms like LR, KNN, GNB and RBF-SVM , AdaBoost, DT and XGBoost also  different simulated and real  world 
+datasets.  The requirement for large and diverse datasets for effective 
+training is hindered by the limited availability of VANET-specific datasets. This limitation makes it difficult to ensure security as the datasets may not cover all potential attacks in VANETs . Performance under limited computational and power resources is also a major challenge.
+
+Mohamed Selim Korium et al. [13] Used four different ML algorithms Random Forest (RF), Extreme Gradient Boost (XGBoost), Category Boosting (Cat Boost), and Light Gradient Boosting Machine (LightGBM) on the CIC-IDS-2017, CSE-CIC-IDS-2018, and CIC-DDoS-2019 datasets separately and merged Implementing an ensemble learning technique as a potential solution, if the model is still overfitting even after tuning the hyperparameters . the datasets that contain a significant number of features, posing the challenge of
+determining a strategy to select the optimal feature or to reduce the
+dimensionality. there are too many important hyper parameters in terms of
+accuracy and speed that make it challenging to choose the specific parameters that have a high influence on the model’s performance to achieve high accuracy
+with no overfitting issue and handle the false positives and false negatives.
+
+Danial Javaheri et al. [14] proposed Clustering methods such as
+FCM which are very fast and incur very low overhead because they do not need any training.This makes them ideal for low-powered environments, as well as
+cases where there is a lack of labeled data. Theese models suffer from a high
+false positive rate and are sensitive to the initial data.Therefore,most
+clustering-based methods try to improve the clustering method by using, for
+instance,metaheuristic algorithms and achieve better results.
+
+Nimisha Pandey et al. [15] devised a  methodology using hybrid approach involving entropy analysis followed by Decision tree based ML layer , it is suitable for devices with low computational power. Entropy-based detection relies on setting a threshold for distinguishing normal and anomalous traffic. Choosing the wrong threshold can lead to False Positives (misidentifying normal traffic as an attack).False Negatives (failing to
+detect actual DDoS attacks) .
+
+SP Priyadharshini et al. [16] Combines DTCN and LSTM in a Hybrid Deep
+Learning model, optimized by HWSCS, for real-time DDoS detection and
+mitigation in FANETs. it has High computational cost and dependency on robust datasets for effective detection and routing optimization.
+
+N. Nishanth et al [17] used Bayesian Inference and Dempster-Shafer evidence
+theory to detect RREQ flooding attacks in a simulated Wireless Ad Hoc Network.
+The approach depends on simulation trace files, which may not fully reflect real-world conditions and dynamic network environments.
+
+In Awajan, A et al [18] proposal Preprocessing included feature selection, random sampling, and log normalization to create balanced datasets for
+training.Log normalization may not always reduce variability, and large datasets increase computational costs.
+
+Shahbaz Ahmad Khanday et al [19] demonstrated a lightweight intrusion detection system combining ML and DL algorithms to classify IoT network traffic and detect DDoS attacks. Faces challenges in resource constraints and may need further optimization for dynamic environments.
+
+
+\section{Methodology}
+The proposed system focuses on detecting Distributed Denial of Service (DDoS) attacks in IoT networks using a hybrid machine learning approach. Given the resource constraints of IoT devices, high network traffic, and evolving attack strategies, our methodology integrates stream-based learning
+with real-time traffic analysis.
+The system employs the Hybrid Hoeffding Adaptive Tree (HybridHAT), an extension of the Hoeffding
+Adaptive Tree (HAT) classifier, which efficiently processes streaming data and adapts to changing traffic patterns. This model is enhanced with a gradual drift detection mechanism, ensuring robustness against evolving DDoS attack techniques.
+\subsection{Concept}\label{AA}
+Entropy quantifies the unpredictability of a system. If all outcomes are equally likely, entropy is highest. If one outcome is certain, entropy is zero.
+lets define  \begin{equation}
+    p(x_i)
+\end{equation}
+which states probability of outcome , then
+\begin{equation}
+    H(X) = -\sum_{i=1}^{n} p(x_i) \log_2 p(x_i)
+    \label{eq:Shannon Entropy}
+\end{equation}
+As shown in Eq. \eqref{eq:Shannon Entropy}, Definition of Shannon Entropy.
+
+With the help of \eqref{eq:Shannon Entropy} we define Information gain , which measures how much entropy is reduced when splitting T on A. Higher IG(T,A) means a better split.
+\begin{equation}
+    IG(T, A) = H(T) - \sum_{v \in \text{Values}(A)} \frac{|T_v|}{|T|} H(T_v)
+    \label{eq:Information Gain}
+\end{equation}
+
+In \eqref{eq:Information Gain} T is the dataset , IG(T,A) → Information gain when splitting dataset T on attribute A , H(T) → Entropy of the dataset T.
+$ v \in \text{Values}(A) $ is Possible values of attribute A.
+$ |T_v| $ is Number of samples in subset $ T_v $ (where A = v).
+$ |T| $ is Total number of samples in dataset T and 
+$ H(T_v) $  is  Entropy of subset $  T_v $.
+
+Purpose of entropy is to measure the impurity or uncertainty in a set of class distributions . Which can be a useful split criterion in Hoeffding Trees.
+
+
+\subsection{Hoeffding Adaptive Tree}
+The Hoeffding Adaptive Tree (HAT) is an advanced streaming decision tree algorithm designed for evolving data streams. It extends the Hoeffding Tree (also called Very Fast Decision Tree, VFDT)  with two key enhancements:
+\begin{itemize}
+    \item Hoeffding Bound for Splitting: Uses statistical theory (Hoeffding inequality) to decide when to split a node with high confidence, even with limited data. It Ensures splits are made only when there’s sufficient evidence that one attribute is better than others.
+
+    \item Adaptation to Concept Drift: Monitors performance of subtrees and replaces underperforming branches when data distribution changes (concept drift). It Uses ADWIN (Adaptive Windowing) to detect drift by analyzing prediction errors over time.
+     
+\end{itemize}
+
+Hoeffding inequality is defined as \begin{equation}
+    P(\bar{X} - \mathbb{E}[\bar{X}] \geq \epsilon) \leq \exp \left( -2n\epsilon^2 \right)
+    \label{eq:Hoeffding1}
+\end{equation}
+for random variable ${X}$ , mean $\bar{X}$ , expected value $ \mathbb{E}[\bar{X}] $ and  $ -2n\epsilon^2$ which is the  exponent in the bound, showing how probability decays with increasing n.
+which is equivalent to \begin{equation}
+    \epsilon = \sqrt{\frac{\ln \left(\frac{1}{\mu} \right)}{2n}}
+     \label{eq:Hoeffding2}
+\end{equation}
+where n is the number of observations ,  ${\mu }$ is the confidence level , ${\epsilon}$ is the threshold for deviation.
+
+ADWIN is a drift detection algorithm that dynamically adjusts its window size to detect changes in data streams. Maintains a variable-length window of recent data and Drops older data when it no longer represents the current distribution. It Splits the window into two sub-windows (old vs. new) and Compares their means (or other statistics) using Hoeffding’s inequality.
+
+\begin{equation}
+    | \hat{\mu}_{W_0} - \hat{\mu}_{W_1} | > \epsilon
+    \label{eq:adwin1}
+\end{equation}
+where $ \hat{\mu}_{W_0} $ is Estimated mean of older data window $ W_0 $ , 
+$ \hat{\mu}_{W_1} $ is Estimated mean of newer data window  $ W_1 $ and 
+If the means of two consecutive windows differ by more than $\epsilon$, concept drift is detected. 
+
+\subsection{Feature Extraction}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.7\linewidth]{ddos_flow.png}
+    \caption{Types of DDoS Attacks}
+    \label{fig:ddos_types}
+\end{figure*}
+
+Once flows are identified, key statistical and behavioral features are computed for each aggregated
+session. These features provide a detailed representation of network activity and are critical for
+accurate classification. The extracted features include:
+\begin{itemize}
+    \item Packet-Based Statistics:
+    \begin{itemize}
+        \item Total packet count: Number of packets exchanged within a flow.
+        \item Average packet size: Determines the typical payload per packet.
+        \item Inter-arrival times: Captures time gaps between successive packets.
+        \item Packet rate: Measures packets transmitted per second.
+
+    \end{itemize}
+    \item Byte-Based Statistics:
+    \begin{itemize}
+        \item Total byte count: Sum of all packet payload sizes within a flow.
+        \item Average bytes per packet: Reflects data density per transmission.
+        \item Flow duration: Time elapsed between the first and last packet of a flow.
+        \item Bandwidth utilization: Estimates throughput based on packet volume.
+
+    \end{itemize}
+    \item Protocol-Specific Features:
+    \begin{itemize}
+        \item TCP flag distribution: Analyzes SYN, ACK, FIN, RST flag occurrences.
+        \item Header size variations: Examines inconsistencies in packet headers.
+        \item Protocol type distribution: Determines protocol-specific traffic ratios.
+
+    \end{itemize}
+
+\end{itemize}
+These features are formatted into structured datasets using NumPy and Pandas, making them compatible with machine learning models.
+
+
+
+\subsection{DDoS Attack}
+This paper analyzes two distinct SYN flood attack methodologies implemented using the Scapy packet manipulation framework. The first approach employs randomized spoofed source IP addresses, variable TCP flags (SYN, SYN-ACK, RST), and randomized payloads with stochastic transmission delays, executed across multiple concurrent threads to maximize throughput while evading signature-based detection systems. The second implementation utilizes a cyclical pattern of fixed source IP addresses combined with a pulsed attack strategy (4-second active flooding intervals alternating with 4-second dormant periods) to circumvent rate-limiting defenses. Both attacks target HTTP services (TCP port 80) on a specified host (192.168.43.108), demonstrating alternative evasion techniques: the first through traffic obfuscation and the second via behavioral mimicry of legitimate burst traffic patterns. 
+
+
+\subsection{Training environment}
+Capturing relevant data from live traffic for model training is crucial in building accurate intrusion
+detection systems. This involves:
+\begin{itemize}
+    \item Packet Collection: Monitoring live traffic using packet sniffing tools
+    \item Feature Extraction: Processing packets to extract meaningful flow statistics.
+    \item Labeling: Differentiating between benign and attack traffic.
+    \item Storage: Structuring the captured data into a structured format for training.
+\end{itemize}
+Scapy and Pyshark libraries were used to accomplish this task.
+
+\begin{algorithm}[t]
+\caption{Traffic Capture  Process}
+\label{alg:traffic}
+\DontPrintSemicolon
+
+\textbf{Load} trained model from \texttt{"hat\_model.pkl"} \;  
+\textbf{Print}("Model loaded!") \;
+
+\SetKwFunction{FMain}{Process\_Packet}
+\SetKwProg{Fn}{Function}{:}{}
+\Fn{\FMain{packet}}{
+    \If{packet contains IP and transport layer}{
+        Extract $(src\_ip, dst\_ip)$ \;
+        \If{neither IP matches \texttt{TARGET\_IP}}{
+            \Return // Ignore packet
+        }
+         Extract $(protocol, timestamp, src\_port,$ \\
+$\hspace{1.5em}dst\_port, packet\_length)$ \;
+         \;
+        flow\_key $\gets$ $(src\_ip, src\_port, dst\_ip, dst\_port, protocol)$ \;
+        \If{flow\_key $\notin$ flow\_stats}{
+            Initialize new flow entry in \texttt{flow\_stats} \;
+            // start time, counters, feature lists
+        }
+        Update last packet time \;
+        Calculate inter-arrival times (IATs) \;
+        Update packet length distribution and statistics \;
+        \If{packet is forwarded}{
+            Update forward-related statistics \;
+        }
+        \Else{
+            Update backward-related statistics \;
+        }
+    }
+}
+
+Start capturing packets on \texttt{INTERFACE} \;
+start\_time $\gets$ current time \;
+
+\While{each captured packet}{
+    \If{elapsed time $>$ \texttt{CAPTURE\_DURATION}}{
+        \textbf{break} \;
+    }
+    \FMain{packet} \;
+}
+
+Initialize $(data, ground\_truth, predictions, probs) \gets$ empty lists \;
+
+\ForEach{flow $\in$ flow\_stats}{
+    Compute duration, packet rates, statistical features \;
+    Construct feature\_vector \;
+    Predict probability of attack using trained model \;
+    \If{probability $>$ 0.8}{
+        Classify as "attack" \;
+    }
+    \Else{
+        Classify as "benign" \;
+    }
+    Store results \;
+}
+
+Export processed data and predictions to CSV \;
+\textbf{Print}("Traffic capture and classification complete!") \;
+
+\end{algorithm}
+
+The implementation is deployed on a Raspberry Pi 4 (8GB RAM version). This specific model is chosen due to its sufficient processing power for lightweight machine learning workloads, low energy consumption, and cost-effectiveness in IoT-based security applications. The Raspberry Pi 4 provides a viable testbed for evaluating the feasibility of deploying network security models in constrained environments.
+
+
+
+\subsection{Inference and Workflow}
+Hybrid HAT operates by incrementally learning from streaming data while dynamically adjusting to changes in network traffic behavior. It leverages the Hoeffding bound to determine the statistical significance of splits in the decision tree while incorporating adaptive drift detection techniques to
+maintain model performance under evolving conditions.
+Key Parameter Tuning
+\begin{itemize}
+    \item grace-period (1000): Specifies the minimum number of instances before evaluating potential
+splits. A higher value prevents early overfitting and ensures stable feature selection.
+    \item delta (1e-05): Defines the confidence level for the Hoeffding bound. A lower value reduces
+unnecessary tree splits by requiring stronger statistical significance before splitting.
+
+    \item tau (0.15): Introduces a margin to handle near-equal split conditions, reducing the likelihood of
+unnecessary tree growth due to minor differences between attribute values. 
+    \item max-depth (8): Limits the maximum depth of the tree to prevent excessive complexity,
+ensuring efficient memory usage and generalization.
+    \item leaf-prediction ("mc"): Uses majority class voting at leaf nodes, making the model more robust
+to noisy data and reducing the risk of overfitting.
+    \item bootstrap-sampling (False): Disables bootstrap sampling to prevent redundant data usage, ensuring the model adapts naturally to new data streams.
+    \item drift-window-threshold (800): Controls the number of instances in the sliding window for
+detecting gradual drift. A higher threshold minimizes false drift detections.
+    \item max-size (600): Restricts the overall memory footprint of the model by limiting the number of
+stored nodes, optimizing computational efficiency.
+    \item stop-mem-management (False): Keeps memory management active to ensure balanced tree growth, preventing premature termination of useful features.
+    \item remove-poor-attrs (True): Dynamically eliminates weak attributes that do not contribute significantly to classification, enhancing model efficiency and accuracy.
+\end{itemize}
+
+\begin{figure}[h]
+
+    \centering
+    \includegraphics[width=0.9\linewidth]{node_sugg (3).png}
+    \caption{Node splitting suggestions}
+    \label{fig:Node splitting suggestions}
+\end{figure}
+The inference program algorithm calculates same features from traffic and creates a feature vector which is given as an input to the model for prediction. The predicted results are then saved in suitable formats for eg. csv format for analysis.
+
+
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.7\linewidth]{workflow.drawio (1).png}
+    \caption{workflow}
+    \label{fig:ddos_types}
+\end{figure*}
+
+
+\subsection{Modification To existing Hoeffding Adaptive Tree}
+We have modified river library implementation of Hoeffding adaptive tree classifier (HAT) , the 
+features of proposed modification:
+
+\begin{itemize}
+    \item Entropy Calculation: Measures the randomness in class distributions to identify uncertain regions in the data.
+    \item Feature Weighting with Decay: Assigns adaptive importance to features while applying decay to prevent older features from dominating.
+    \item Information Gain Computation: Evaluates potential splits based on entropy reduction, ensuring efficient decision tree growth.
+    \item Adaptive Learning Integration: Updates feature importance dynamically, allowing the model to refine feature selection over time.
+
+
+\end{itemize}
+
+\begin{algorithm}[t]
+\caption{Adaptive Entropy HAT - Initialization and Entropy Calculation}
+\label{alg:adaptive_entropy_hat_part1}
+\SetAlgoLined
+\DontPrintSemicolon
+
+\SetKwFunction{AHAT}{AdaptiveEntropyHAT}
+\SetKwFunction{Entropy}{\_entropy}
+
+\KwOut{Trained Hoeffding Adaptive Tree with feature adaptation}
+
+\BlankLine
+
+\AHAT{} \;
+Initialize \texttt{feature\_usage} as dictionary with default value 0 \;
+Set $\texttt{decay\_rate} \gets 0.95$ \;
+\BlankLine
+
+\SetKwProg{Fn}{Function}{:}{end}
+\Fn{\Entropy{class\_counts}}{
+    $\texttt{total} \gets \text{sum of all values in } \texttt{class\_counts}$ \;
+    \If{$\texttt{total} = 0$} {
+        \Return 0 \tcp*{Prevent division by zero}
+    }
+    $\texttt{entropy} \gets 0$ \;
+    \ForEach{$\texttt{count} \in \texttt{class\_counts}$} {
+        $\texttt{probability} \gets \texttt{count} / \texttt{total}$ \;
+        $\texttt{entropy} \gets \texttt{entropy} - (\texttt{probability} \times \log_2(\texttt{probability}))$ \;
+    }
+    \Return \texttt{entropy} \;
+}
+\end{algorithm}
+
+Algorithm 2 defines data structure initialization and entropy calculation (Shannon Entropy in this case), the value of decay rate needs further experimentation , the program might give better results at different decay rates. AdaptiveEntropyHAT function is further continued in Algorithm 3 which calculates entropy of parent node and applies decay on the scores of features present in dictionary. The features which are frequently in use will remain top features even after decay but irrelevant features will keep on getting lower scores and given lower priority in splitting. This feedback loop builds resilience to concept drift by preventing unproductive splits. Algorithm 4 For each candidate feature  computes weighted entropy across all child nodes
+and then calculates information gain (parent entropy - weighted entropy).
+It finally Adjusts score by incorporating feature usage history. 
+\begin{equation}
+    score =  infogain × (1 + featureUsage[feature])
+    \label{eq:adjusted}
+\end{equation}
+ Eq \eqref{eq:adjusted} frequently used feature prioritisation.
+
+features with higher historical usage receive boosted scores
+which creates a feedback loop where frequently useful features get preference.
+
+
+
+
+\begin{algorithm}[t]
+\caption{Preprocessing for Best Split}
+\label{alg:adaptive_entropy_hat_part2a}
+\SetAlgoLined
+\DontPrintSemicolon
+
+\SetKwFunction{PreprocessSplit}{\_preprocess\_split}
+\KwOut{Decayed feature usage and parent entropy}
+
+\BlankLine
+
+\SetKwProg{Fn}{Function}{:}{end}
+\Fn{\PreprocessSplit{node}}{
+    \tcp{Apply decay to old feature importance}
+    \ForEach{$\texttt{feature} \in \texttt{feature\_usage}$} {
+        $\texttt{feature\_usage[feature]} \gets \texttt{feature\_usage[feature]} \times \texttt{decay\_rate}$ \;
+    }
+
+    \tcp{Compute entropy before split}
+    $\texttt{parent\_entropy} \gets \Entropy{\texttt{node.class\_distribution}}$ \;
+
+    \Return $\texttt{parent\_entropy}$ \;
+}
+\end{algorithm}
+
+\begin{algorithm}[t]
+\caption{Score and Select Best Feature}
+\label{alg:adaptive_entropy_hat_part2b}
+\SetAlgoLined
+\DontPrintSemicolon
+
+\SetKwFunction{ScoreFeatures}{\_score\_features}
+\KwOut{Best feature based on adjusted info gain}
+
+\BlankLine
+
+\SetKwProg{Fn}{Function}{:}{end}
+\Fn{\ScoreFeatures{node, parent\_entropy}} {
+    $\texttt{best\_split} \gets \text{NULL}$ \;
+    $\texttt{best\_score} \gets -\infty$ \;
+
+    $\texttt{total\_instances} \gets \text{sum of } \texttt{node.class\_distribution} \text{ values}$ \;
+
+    \ForEach{$\texttt{feature} \in \texttt{node.split\_suggestions}$} {
+        $\texttt{weighted\_entropy} \gets 0$ \;
+        \ForEach{$\texttt{child\_stats} \in \texttt{feature.children\_stats}$} {
+            $\texttt{child\_entropy} \gets \Entropy{\texttt{child\_stats}}$ \;
+            $\texttt{child\_weight} \gets \text{sum}(\texttt{child\_stats}) / \texttt{total\_instances}$ \;
+            $\texttt{weighted\_entropy} \gets \texttt{weighted\_entropy} + \texttt{child\_weight} \times \texttt{child\_entropy}$ \;
+        }
+
+        $\texttt{info\_gain} \gets \texttt{parent\_entropy} - \texttt{weighted\_entropy}$ \;
+
+        \tcp{Adapt score using feature usage history}
+        $\texttt{adjusted\_score} \gets \texttt{info\_gain} \times (1 + \texttt{feature\_usage[feature]})$ \;
+
+        \If{$\texttt{adjusted\_score} > \texttt{best\_score}$} {
+            $\texttt{best\_score} \gets \texttt{adjusted\_score}$ \;
+            $\texttt{best\_split} \gets \texttt{feature}$ \;
+        }
+    }
+
+    \Return $\texttt{best\_split}$ \;
+}
+\end{algorithm}
+
+\begin{algorithm}[t]
+\caption{Adaptive Entropy HAT - Finding the Best Split (Wrapper)}
+\label{alg:adaptive_entropy_hat_part2c}
+\SetAlgoLined
+\DontPrintSemicolon
+
+\SetKwFunction{Split}{\_find\_best\_split}
+\SetKwFunction{PreprocessSplit}{\_preprocess\_split}
+\SetKwFunction{ScoreFeatures}{\_score\_features}
+\KwOut{Best feature split for decision tree growth}
+
+\BlankLine
+
+\SetKwProg{Fn}{Function}{:}{end}
+\Fn{\Split{node, parent, parent\_branch}}{
+    $\texttt{parent\_entropy} \gets \PreprocessSplit{node}$ \;
+    $\texttt{best\_split} \gets \ScoreFeatures{node, parent\_entropy}$ \;
+
+    \If{$\texttt{best\_split} \neq \text{NULL}$} {
+        $\texttt{feature\_usage[best\_split]} \gets \texttt{feature\_usage[best\_split]} + 1$ \;
+    }
+
+    \Return $\texttt{best\_split}$ \;
+}
+\end{algorithm}
+
+
+
+
+
+\subsection{Figures and Tables}
+
+
+\section*{Acknowledgment}
+
+The preferred spelling of the word ``acknowledgment'' in America is without 
+an ``e'' after the ``g''. Avoid the stilted expression ``one of us (R. B. 
+G.) thanks $\ldots$''. Instead, try ``R. B. G. thanks$\ldots$''. Put sponsor 
+acknowledgments in the unnumbered footnote on the first page.
+
+
+
+
+\begin{thebibliography}{00}
+\bibitem{b1} Kumar, P., Bagga, H., Netam, B.S. et al. SAD-IoT: Security Analysis of DDoS Attacks in IoT Networks. Wireless Pers Commun 122, 87–108 (2022).
+\bibitem{b2} Said Neciri. (2024). Hybrid Deep Learning for Anomaly Detection in FANETs: A Defense Against DDoS Attacks. International Journal of Intelligent Systems and Applications in Engineering, 12(4), 3799
+\bibitem{b3} Ain NU, Sardaraz M, Tahir M, Abo Elsoud MW, Alourani A. Securing IoT Networks Against DDoS Attacks: A Hybrid Deep Learning Approach. Sensors. 2025; 25(5):1346
+\bibitem{b4} Lawall, Muhammad Aminu, Shaikh, Riaz Ahmed and Hassan, Syed Raheel (2021) A DDoS attack mitigation framework for IoT networks using fog computing. Procedia Computer Science, 182. pp. 13-20. ISSN 1877-0509.
+\bibitem{b5} Pooja Kumari, Ankit Kumar Jain, A comprehensive study of DDoS attacks over IoT network and their countermeasures, Computers and Security, Volume 127, 2023, 103096 , ISSN 0167-4048.
+\bibitem{b6} Bifet, Albert and Gavaldà, Ricard. (2009). Adaptive Learning from Evolving Data Streams. 249-260. 10.1007/978-3-642-03915-7-22.
+\bibitem{b7} Devrim Akgun, Selman Hizal, Unal Cavusoglu,A new DDoS attacks intrusion detection model based on deep learning for cybersecurity,Computers and Security,Volume 118,2022.
+\bibitem{b8} H. J. Hadi, U. Hayat, N. Musthaq, F. B. Hussain and Y. Cao, "Developing Realistic Distributed Denial of Service (DDoS) Dataset for Machine Learning-based Intrusion Detection System," 2022 9th 
+International Conference on Internet of Things: Systems, Management and Security (IOTSMS), Milan, Italy, 2022 
+\bibitem{b9} Haiping Lin, Chengwen Wu, Mohammad Masdari,A comprehensive survey of network traffic anomalies and DDoS attacks detection schemes using fuzzy techniques,Computers and Electrical Engineering,Volume 104, Part B,2022 
+\bibitem{b10} Sharmin Aktar, Abdullah Yasin Nur,Towards DDoS attack detection using deep learning approach,Computers and Security,Volume 129,2023 
+\bibitem{b11} Meddeb, R., Jemili, F., Triki, B. et al. A deep learning-based intrusion detection approach for mobile Ad-hoc network. Soft Comput 27, 9425–9439 (2023). 
+\bibitem{b12} N. A. Al-Khulaidi, A. T. Zahary, A. A. Al-Shargabi and M. A. S. Hazaa, "Machine Learning for Intrusion Detection in Vehicular Ad-hoc Networks (VANETs): A Survey," 2024 4th International Conference on Emerging Smart Technologies and Applications (eSmarTA), Sana'a, Yemen, 2024
+\bibitem{b13} Mohamed Selim Korium, Mohamed Saber, Alexander Beattie, Arun Narayanan, Subham Sahoo, Pedro H.J. Nardelli,Intrusion detection system for cyberattacks in the Internet of Vehicles environment,Ad Hoc Networks,Volume 153,2024 . 
+\bibitem{b14} Danial Javaheri, Saeid Gorgin, Jeong-A Lee, Mohammad Masdari,Fuzzy logic-based DDoS
+attacks and network traffic anomaly detection methods: Classification, overview, and future perspectives,Information Sciences,Volume 626,2023
+\bibitem{b15} Nimisha Pandey, Pramod Kumar Mishra,Devising a hybrid approach for near real-time DDoS detection in IoT,Computers and Electrical Engineering,Volume 118, Part B,2024.
+\bibitem{b16} SP Priyadharshini, P. Balamurugan,An efficient DDoS attack detection and prevention model using fusion heuristic enhancement of deep learning approach in FANET sector,Applied Soft Computing,Volume 167, Part C,2024.
+\bibitem{b17} N. Nishanth and A. Mujeeb, "Modeling and Detection of Flooding-Based Denial of Service Attacks in Wireless Ad Hoc Networks Using Uncertain Reasoning," in IEEE Transactions on Cognitive Communications and Networking, vol. 7, no. 3, pp. 893-904, Sept. 2021.
+\bibitem{b18} Awajan, A. A Novel Deep Learning-Based Intrusion Detection System for IoT Networks. Computers 2023, 12, 34.
+\bibitem{b19} Shahbaz Ahmad Khanday, Hoor Fatima, Nitin Rakesh,Implementation of intrusion detection model for DDoS attacks in Lightweight IoT Networks,Expert Systems with Applications,Volume 215,2023.
+
+
+
+\end{thebibliography}
+\vspace{12pt}
+
+
+\end{document}
