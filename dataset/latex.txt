@@ -3,11 +3,19 @@
 % The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
 \usepackage{cite}
 \usepackage{amsmath,amssymb,amsfonts}
-\usepackage{algorithmic}
+
 \usepackage{graphicx}
 \usepackage{textcomp}
 \usepackage{xcolor}
 \usepackage[linesnumbered,ruled,vlined]{algorithm2e}
+
+\usepackage{algorithmicx}
+
+\usepackage{algpseudocode}
+
+\usepackage{hyperref}
+\usepackage{caption}
+
 
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
@@ -415,6 +423,8 @@ It finally Adjusts score by incorporating feature usage history.
 features with higher historical usage receive boosted scores
 which creates a feedback loop where frequently useful features get preference.
 
+Algorithm 5 rewards feature with best split by increasing its feature usage score by 1.
+
 
 
 
@@ -514,7 +524,75 @@ which creates a feedback loop where frequently useful features get preference.
 
 
 
-\subsection{Figures and Tables}
+\subsection{Second Modification to the Hoeffding Adaptive Tree}
+
+\begin{algorithm}
+\caption{Sliding Window HAT with Variance-Based Drift Detection}
+\label{alg:sliding_window_hat}
+\begin{algorithmic}[1]
+\Procedure{SlidingWindowHAT\_v1}{$\text{window\_size} \gets 50$}
+    \State $\text{feature\_window} \gets \{\}$ 
+    \Comment{Initialize empty dictionary}
+    \State \Return Initialization complete
+\EndProcedure
+
+\Procedure{UpdateNode}{node, x, y}
+    \ForAll{$(\text{feature}, \text{value}) \in x $}
+        \If{$\text{feature} \notin \text{feature\_window}$}
+            \State $\text{feature\_window}[\text{feature}] \gets \text{Deque}(\text{maxlen} = \text{window\_size})$
+        \EndIf
+        \State $\text{feature\_window}[\text{feature}].\text{append}(\text{value})$
+        \If{$\text{len}(\text{feature\_window}[\text{feature}]) = \text{window\_size}$}
+            \State $\sigma^2 \gets \text{Var}(\text{feature\_window}[\text{feature}])$
+            \If{$\sigma^2 > 0.1$}
+                \State \textbf{Print:} ``Drift detected in feature'', $\text{feature}$
+                \State \Return \Call{NewLeaf}{}
+            \EndIf
+        \EndIf
+    \EndFor
+    \State \Return \Call{ParentUpdateNode}{node, x, y}
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+ADWIN is great for abrupt changes but not for slow drift. This variance-based check adds sensitivity to slowly evolving changes. it is an computationally light weight algorithm utilizing double ended queue for efficient for real-time stream processing. It can detect drift per feature, allowing for fine-grained response (e.g., reset only affected parts of the tree). It is easy to integrate with river and complements the existing ADWIN-based logic without interfering. 
+
+In Algorithm 6 $feature\_window $ is a dictionary mapping feature names to their sliding windows (deque). $window\_size$ controls how many recent values to remember per feature. UpdateNode function is called whenever a sample is processed.
+For each feature:
+\begin{itemize}
+    
+
+
+\item  Add the new value to the corresponding window.
+
+\item When the window is full, compute variance.
+
+\item If variance $ > $ threshold (e.g., 0.1), assume gradual drift and reset the subtree by calling NewLeaf.
+
+\end{itemize}
+
+If no drift is detected, algorithm proceeds with the normal tree update logic.
+
+The use case of this algorithm can be understood with the help of an example : Imagine a drone sensor system where the temperature readings slowly increase due to environmental changes. This slow drift might not trigger ADWIN, but the variance in the temperature feature's window will increase, and this logic will catch it and reset parts of the model.
+
+The purpose of this algorithm is to make more effective detection of gradual $ / $ slow drift.
+
+Algorithm 2 to 5 are parts of Adaptive Entropy program and Algorithm 6 is the gradual drift detection program. 
+
+\section*{Results}
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 \section*{Acknowledgment}
