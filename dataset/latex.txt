@@ -719,10 +719,15 @@ AUC-PRC & 0.9974  \\
 **Comparative Analysis of Adaptive vs. Basic HAT Models—**The Adaptive HAT model outperforms the Basic HAT in terms of overall accuracy (0.9956 vs. 0.9795) and balanced accuracy, indicating superior adaptation to the data stream. Both models achieve perfect recall (1.0000), effectively identifying all positive instances. However, Adaptive HAT exhibits higher precision (0.9921 vs. 0.9635), resulting in fewer false positives and a higher F1-score (0.9960 vs. 0.9814). In terms of specificity, the Adaptive HAT (0.9900) is more effective at correctly identifying negative instances compared to Basic HAT (0.9553), making it more reliable when false positives are costly. While Basic HAT shows slightly better AUC-ROC (0.9983) and AUC-PRC (0.9974), suggesting strong theoretical class separation, the Adaptive HAT's higher precision and real-world reliability make it the preferred choice. Its consistent and stable performance underlines its practical utility, especially in environments where minimizing misclassifications is critical.
 
 \section*{Conclusion}
+The entropy-based Hoeffding Adaptive Tree model demonstrated strong classification performance, particularly against UDP flood attacks, while showing slightly reduced effectiveness against TCP floods. This disparity underscores the importance of continuous feature refinement, dynamic drift
+adaptation, and robust split selection strategies. By incorporating flow-level analysis, adaptive concept drift handling, and ensemble methods, the model can be further optimized for real-time intrusion detection across diverse network attack scenarios. Ensuring the model’s adaptability
+against evolving cyber threats will be crucial for maintaining a resilient and proactive security posture.
+
 
 \section*{Acknowledgment}
 
 
+The authors would like to thank Prof. Padmanaban R., Assistant Professor Senior Grade 2, Department of Computer Science, Vellore Institute of Technology, for his invaluable guidance and continuous support throughout this work.
 
 
 
