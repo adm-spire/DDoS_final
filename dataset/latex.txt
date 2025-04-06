@@ -110,7 +110,7 @@ with no overfitting issue and handle the false positives and false negatives.
 
 Danial Javaheri et al. [14] proposed Clustering methods such as
 FCM which are very fast and incur very low overhead because they do not need any training.This makes them ideal for low-powered environments, as well as
-cases where there is a lack of labeled data. Theese models suffer from a high
+cases where there is a lack of labeled data. These models suffer from a high
 false positive rate and are sensitive to the initial data.Therefore,most
 clustering-based methods try to improve the clustering method by using, for
 instance,metaheuristic algorithms and achieve better results.
@@ -147,15 +147,15 @@ which states probability of outcome , then
     H(X) = -\sum_{i=1}^{n} p(x_i) \log_2 p(x_i)
     \label{eq:Shannon Entropy}
 \end{equation}
-As shown in Eq. \eqref{eq:Shannon Entropy}, Definition of Shannon Entropy.
+As shown in Eq. (2), Definition of Shannon Entropy.
 
-With the help of \eqref{eq:Shannon Entropy} we define Information gain , which measures how much entropy is reduced when splitting T on A. Higher IG(T,A) means a better split.
+With the help of (2) we define Information gain , which measures how much entropy is reduced when splitting T on A. Higher IG(T,A) means a better split.
 \begin{equation}
     IG(T, A) = H(T) - \sum_{v \in \text{Values}(A)} \frac{|T_v|}{|T|} H(T_v)
     \label{eq:Information Gain}
 \end{equation}
 
-In \eqref{eq:Information Gain} T is the dataset , IG(T,A) → Information gain when splitting dataset T on attribute A , H(T) → Entropy of the dataset T.
+In (3) T is the dataset , IG(T,A) → Information gain when splitting dataset T on attribute A , H(T) → Entropy of the dataset T.
 $ v \in \text{Values}(A) $ is Possible values of attribute A.
 $ |T_v| $ is Number of samples in subset $ T_v $ (where A = v).
 $ |T| $ is Total number of samples in dataset T and 
@@ -418,7 +418,7 @@ It finally Adjusts score by incorporating feature usage history.
     score =  infogain × (1 + featureUsage[feature])
     \label{eq:adjusted}
 \end{equation}
- Eq \eqref{eq:adjusted} frequently used feature prioritisation.
+ Eq (7) frequently used feature prioritisation.
 
 features with higher historical usage receive boosted scores
 which creates a feedback loop where frequently useful features get preference.
