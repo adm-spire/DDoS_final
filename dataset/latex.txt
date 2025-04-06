@@ -580,27 +580,149 @@ The purpose of this algorithm is to make more effective detection of gradual $ /
 Algorithm 2 to 5 are parts of Adaptive Entropy program and Algorithm 6 is the gradual drift detection program. 
 
 \section*{Results}
+first test was against TCP flood attack for duration of 60 seconds . Some Benign traffic was also introduced comprising of 10 benign users , attacker sent flood of spoofed IP addresses for attack.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\linewidth]{conf1.png}
+    \caption{Confusion matrix against TCP flood}
+    \label{fig:conf against tcp flood}
+\end{figure}
+
+These are evaluation metrics:
+
+\begin{table}[htbp]
+\caption{Performance against TCP Flood}
+\centering
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Metric} & \textbf{Value} \\
+\hline
+
+Accuracy & 0.9956 \\
+Precision & 0.9921 \\
+Recall & 1.0000 \\
+F1 Score & 0.9960 \\
+Specificity & 0.9900  \\
+Balanced Accuracy & 0.9950 \\
+G-Mean & 0.9950 \\
+AUC-ROC & 0.9950 \\
+AUC-PRC & 0.9921 \\
+
+\hline
+\end{tabular}
+\label{tab:example}
+\end{table}
+
+**Key Observations—**The model demonstrates exceptional overall performance, with an accuracy of 99.56 \% and a balanced accuracy of 99.50 \%, indicating strong predictive power even in the presence of class imbalance. Precision (0.9921) and recall (1.0000) suggest a highly reliable model, with a near-perfect F1-score of 0.9960 reflecting a strong balance between these metrics. Specificity (0.9900) and G-Mean (0.9950) further highlight the model's robustness across both classes. Additionally, the AUC-ROC (0.9950) and AUC-PRC (0.9921) indicate excellent discriminative ability, particularly important under imbalanced conditions. Despite near-perfect performance, the presence of minor false positives and perfect recall raises the possibility of overfitting. Adjustments to decision thresholds may improve precision if misclassifying negatives is costly. Overall, the model performs extremely well, even under class imbalance, but may require monitoring for generalization under concept drift.
 
 
 
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{rolling1.png}
+    \caption{Rolling Accuracy against TCP flood}
+    \label{fig:rolling accuracy against tcp flood}
+\end{figure}
+
+**Rolling Accuracy Analysis—**The model's accuracy exhibits significant fluctuations over time, reflecting its continuous adaptation to the evolving data stream. Initially low (~0.40), the accuracy gradually improves to approximately 0.65, indicating ongoing learning. However, the frequent oscillations suggest the model is dynamically responding to shifts in data distribution, likely caused by concept drift. This behavior underscores the model's sensitivity to real-time changes and highlights the importance of monitoring performance stability in streaming environments.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{precision1.png}
+    \caption{Rolling precision , recall and  f1 score against TCP flood}
+    \label{fig:rolling prf1 tcp flood}
+\end{figure}
+
+**Precision, Recall, and F1-Score Analysis—**The recall remains consistently near 1.0, indicating that the model effectively identifies nearly all positive instances. Precision begins lower (~0.992) and improves over time, though fluctuations suggest the presence of some false positives. The F1-score remains generally high and stable, reflecting a strong balance between precision and recall. However, a decline in both precision and F1-score toward the end suggests potential concept drift or a degradation in the model’s performance over time.
+
+Next Test was against UDP Flood for 60 Seconds.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.7\linewidth]{conf2.png}
+    \caption{Confusion matrix against UDP flood}
+    \label{fig:conf2 udp flood}
+\end{figure}
 
 
+\begin{table}[htbp]
+\caption{Performance against UDP Flood}
+\centering
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Metric} & \textbf{Value} \\
+\hline
+
+Accuracy & 0.9992 \\
+Precision & 1.0000 \\
+Recall & 0.9984 \\
+F1 Score & 0.9992 \\
+Specificity & 1.0000 \\
+Balanced Accuracy & 0.9992 \\
+G-Mean & 0.9992 \\
+AUC-ROC & 0.9992 \\
+AUC-PRC & 0.9991 \\
+AUC-PRC & 0.9991 \\
+
+\hline
+\end{tabular}
+\label{tab:example}
+\end{table}
+
+**Key Observations—**The model demonstrates near-perfect performance, with an accuracy and balanced accuracy of 0.9992, indicating exceptional reliability across both classes, even under imbalance. Precision (1.0000) and specificity (1.0000) confirm the absence of false positives, while recall (0.9984) reflects that nearly all positive instances are correctly identified. The high F1-score (0.9992), G-Mean (0.9992), AUC-ROC (0.9992), and AUC-PRC (0.9991) further underscore the model's robustness and discriminative power. However, this exceptional performance may be attributed to the simplicity of the test case or high similarity with training data, raising concerns of potential overfitting or overconfidence. The slight drop in recall is negligible, but the results suggest the importance of evaluating the model under diverse test conditions, especially in dynamic environments subject to concept drift.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{rolling2.png}
+    \caption{Rolling Accuracy against UDP flood}
+    \label{fig:rolling udp flood}
+\end{figure}
+
+**Rolling Accuracy Analysis—**Initially, the model's accuracy fluctuates significantly, dropping as low as 0.15 before gradually improving to around 0.50. These fluctuations reflect the model’s adaptive learning behavior in response to a dynamic data stream, likely influenced by concept drift. The eventual stabilization of accuracy suggests that the model has adapted to a relatively simple or consistent attack pattern over time.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{prcision2.png}
+    \caption{precision , recall and f1 score against UDP flood}
+    \label{fig:prcf1 2 udp flood}
+\end{figure}
+
+**Precision, Recall, and F1-Score Analysis—**The recall drops initially, indicating that some attack instances were misclassified as benign, while precision remains consistently perfect (1.0), showing the absence of false positives. The F1-score stays generally high and stable, reflecting a strong balance between precision and recall. Toward the end, the stabilization of both precision and F1-score implies the absence of further concept drift and confirms the model's reliable performance once it has adapted.
+
+Model was also tested for TCP flood without our Adaptive Entropy and Gradual Drift modifications for TCP flood.
+
+\begin{table}[htbp]
+\caption{Performance against TCP Flood without modifications}
+\centering
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Metric} & \textbf{Value} \\
+\hline
+
+Accuracy & 0.9795 \\
+Precision & 0.9635 \\
+Recall & 1.0000 \\
+F1 Score & 0.9814 \\
+Specificity & 0.9553 \\
+Balanced Accuracy & 0.9776 \\
+G-Mean & 0.9774 \\
+AUC-ROC & 0.9983 \\
+AUC-PRC & 0.9974  \\
 
 
+\hline
+\end{tabular}
+\label{tab:example}
+\end{table}
 
+**Comparative Analysis of Adaptive vs. Basic HAT Models—**The Adaptive HAT model outperforms the Basic HAT in terms of overall accuracy (0.9956 vs. 0.9795) and balanced accuracy, indicating superior adaptation to the data stream. Both models achieve perfect recall (1.0000), effectively identifying all positive instances. However, Adaptive HAT exhibits higher precision (0.9921 vs. 0.9635), resulting in fewer false positives and a higher F1-score (0.9960 vs. 0.9814). In terms of specificity, the Adaptive HAT (0.9900) is more effective at correctly identifying negative instances compared to Basic HAT (0.9553), making it more reliable when false positives are costly. While Basic HAT shows slightly better AUC-ROC (0.9983) and AUC-PRC (0.9974), suggesting strong theoretical class separation, the Adaptive HAT's higher precision and real-world reliability make it the preferred choice. Its consistent and stable performance underlines its practical utility, especially in environments where minimizing misclassifications is critical.
 
-
-
-
-
-
+\section*{Conclusion}
 
 \section*{Acknowledgment}
 
-The preferred spelling of the word ``acknowledgment'' in America is without 
-an ``e'' after the ``g''. Avoid the stilted expression ``one of us (R. B. 
-G.) thanks $\ldots$''. Instead, try ``R. B. G. thanks$\ldots$''. Put sponsor 
-acknowledgments in the unnumbered footnote on the first page.
+
 
 
 
