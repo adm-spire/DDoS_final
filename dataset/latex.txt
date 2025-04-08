@@ -56,11 +56,11 @@ Distributed Denial of Service (DDoS) , Hoeffding Adaptive Tree , Entropy , Inter
 \end{IEEEkeywords}
 
 \section{Introduction}
-The rapid proliferation of Internet of Things (IoT) devices and Flying Ad Hoc Networks (FANETs) has revolutionized various domains, including smart cities, industrial automation, and defense applications. These resource-constrained devices operate in highly dynamic environments and communicate over wireless networks, making them particularly vulnerable to cyber threats. Among these, Distributed Denial of Service (DDoS) attacks [1] pose a significant challenge, disrupting network availability by overwhelming devices with excessive traffic.
+The rapid proliferation of Internet of Things (IoT) devices and Flying Ad Hoc Networks (FANETs) has revolutionized various domains, including smart cities, industrial automation, and defense applications.[1] These resource-constrained devices operate in highly dynamic environments and communicate over wireless networks, making them particularly vulnerable to cyber threats. Among these, Distributed Denial of Service (DDoS) attacks [2][3] pose a significant challenge, disrupting network availability by overwhelming devices with excessive traffic.
 
-DDoS attacks on IoT and FANET-based systems can have severe consequences. In smart infrastructure, they can cripple essential services such as traffic management, power grids, and healthcare monitoring systems, leading to economic and human losses. In military and disaster-response FANETs, targeted attacks can render drone swarms inoperative, leading to mission failures and security breaches [2]. The low computational capacity of IoT and FANET nodes further exacerbates the problem, as traditional security mechanisms are often infeasible due to their high processing and storage requirements [3] .
+DDoS attacks on IoT and FANET-based systems can have severe consequences. In smart infrastructure, they can cripple essential services such as traffic management, power grids, and healthcare monitoring systems, leading to economic and human losses. In military and disaster-response FANETs, targeted attacks can render drone swarms inoperative [4], leading to mission failures and security breaches [5][6]. The low computational capacity of IoT and FANET nodes further exacerbates the problem, as traditional security mechanisms are often infeasible due to their high processing and storage requirements [7][8][9] .
 
-Existing DDoS detection techniques rely heavily on signature-based or anomaly-based methods. However, signature-based approaches struggle to detect zero-day attacks, while anomaly-based methods face challenges in real-time decision-making due to the high velocity of incoming data [4][5]. To address these limitations, stream-based learning models such as Very Fast Decision Trees (VFDT) have emerged as promising solutions. These models can continuously learn from network traffic in an online manner, making them well-suited for real-time intrusion detection in IoT and FANET environments [6].
+Existing DDoS detection techniques rely heavily on signature-based or anomaly-based methods. However, signature-based approaches struggle to detect zero-day attacks, while anomaly-based methods face challenges in real-time decision-making due to the high velocity of incoming data [10][11]. To address these limitations, stream-based learning models such as Very Fast Decision Trees (VFDT) have emerged as promising solutions. These models can continuously learn from network traffic in an online manner, making them well-suited for real-time intrusion detection in IoT and FANET environments [12].
 
 In this paper, we propose Adaptive Entropy HAT, an enhancement of the Hoeffding Adaptive Tree (HAT) classifier, specifically designed for real-time DDoS detection. The key contributions of this work are:
 
@@ -70,66 +70,66 @@ Adaptive feature selection: Dynamically adjusting feature importance using a dec
 
 Lightweight real-time detection: Optimizing the model for resource-constrained IoT and FANET devices while maintaining high detection accuracy.
 
-To evaluate the effectiveness of real-time DDoS detection on resource-constrained IoT hardware, we generated our own attack traffic instead of relying on existing datasets. Public datasets such as CIC-DDoS2019 are often highly imbalanced, with benign traffic vastly outnumbering attack samples. Sampling these datasets to balance classes can distort key temporal features, such as Inter-Arrival Time (IAT) statistics, which are critical for real-world attack detection. By generating our own traffic, we ensured a more controlled and realistic assessment of the proposed method’s performance in an IoT setting. The attack traffic includes:
+To evaluate the effectiveness of real-time DDoS detection on resource-constrained IoT hardware, we generated our own attack traffic instead of relying on existing datasets [13][14]. Public datasets such as CIC-DDoS2019 are often highly imbalanced, with benign traffic vastly outnumbering attack samples [15][16]. Sampling these datasets to balance classes can distort key temporal features, such as Inter-Arrival Time (IAT) statistics, which are critical for real-world attack detection. By generating our own traffic, we ensured a more controlled and realistic assessment of the proposed method’s performance in an IoT setting. The attack traffic includes:
 
-(1) TCP SYN Flood with Stealth Variations: A multi-threaded SYN flood attack was implemented using Scapy, where each packet had a spoofed source IP address and random TCP flags (SYN, SYN-ACK, RST) to evade detection. Additionally, random payloads were added to increase entropy and mimic real-world attack behavior.
+(1) TCP SYN Flood with Stealth Variations: A multi-threaded SYN flood attack was implemented using Scapy, where each packet had a spoofed source IP address and random TCP flags (SYN, SYN-ACK, RST) to evade detection. Additionally, random payloads were added to increase entropy and mimic real-world attack behavior [17].
 
 (2) UDP Flood with Pulsing Strategy: A UDP flood attack was launched using predefined source IPs from an IP cycling list to simulate botnet-based attack patterns. The attack was executed in short bursts, mimicking real-world low-rate pulsing DDoS attacks to evade traditional threshold-based detection.
 
 \section{Related Work}
 
-Devrim et al. [7] used various models based on Deep Neural Networks (DNN), Convolutional Neural Networks (CNN), and Long Short Term Memory (LSTM) have been evaluated in terms of detection performance and real-time performance.
+Devrim et al. [18] used various models based on Deep Neural Networks (DNN), Convolutional Neural Networks (CNN), and Long Short Term Memory (LSTM) have been evaluated in terms of detection performance and real-time performance.
 The tests suggest that the proposed model has in general higher response 
 time when compared to baseline models like DNN. 
 
-H. J. Hadi et al. [8] presented a unique real dataset having more than 5.6 million data samples for DDoS was generated with the help of multi simulators 
+H. J. Hadi et al. [19] presented a unique real dataset having more than 5.6 million data samples for DDoS was generated with the help of multi simulators 
 in a network. The size of the sample is enough to satisfy any anomaly detection mode for training efficiently to detect aforementioned attacks. The attack diversity shown by the dataset was created by thousand spoofed attackers and with 10 Gbps traffic. The downside is that Models trained on such dataset may fail zero day attacks , custom datasets might be needed for practical use cases.  
 
-Haiping Lin et al. [9] It discusses various issues regarding the studied fuzzy network anomaly detection schemes. For this purpose, several charts regarding the various features of the studied schemes have been presented, providing useful insight into the studied schemes and further illuminating future research directions and possible open issues.  As shown , fuzzy classifiers and fuzzy clustering techniques are benefited in the investigated schemes to deal with anomalies. Only a few anomaly detection approaches have focused on dealing with imbalanced datasets, but this issue should be investigated further and handled in the future. A real-time anomaly detection approach should run-time have low complexity. Thus exploring new and low-overhead methods should be investigated in the future.
+Haiping Lin et al. [20] It discusses various issues regarding the studied fuzzy network anomaly detection schemes. For this purpose, several charts regarding the various features of the studied schemes have been presented, providing useful insight into the studied schemes and further illuminating future research directions and possible open issues.  As shown , fuzzy classifiers and fuzzy clustering techniques are benefited in the investigated schemes to deal with anomalies. Only a few anomaly detection approaches have focused on dealing with imbalanced datasets, but this issue should be investigated further and handled in the future. A real-time anomaly detection approach should run-time have low complexity. Thus exploring new and low-overhead methods should be investigated in the future.
 
-Sharmin Aktar et al. [10] used  Deep Contractive Autoencoder (DCAE), containing  two encoder and decoder layers, to learn the representations 
+Sharmin Aktar et al. [21] used  Deep Contractive Autoencoder (DCAE), containing  two encoder and decoder layers, to learn the representations 
 of the network sample in a semi-supervised manner . AE-based techniques may 
 also produce alarms, false particularly when the attack is similar to normal 
 network traffic. In the case of using non optimal hyperparameters of the 
 AE-based techniques, the accuracy significantly can drop. 
 
-Meddeb, R. et al [11] utilized an approach which comprises 
+Meddeb, R. et al [22] utilized an approach which comprises 
 several components, including the data collection training module that gathers network traffic data, the attack signatures generation module that analyzes the collected data against suspicious activities and defines class labels, and the stacked autoencoder module that obtains relevant features 
 using Dimensionality Reduction techniques. DNN  face a higher risk of 
 overfitting, require a much larger volume of data for training. the impact of the unbalanced dataset needs to be considered in future studies.
 
-N. A. Al-Khulaidi et al. [12] analysed algorithms like LR, KNN, GNB and RBF-SVM , AdaBoost, DT and XGBoost also  different simulated and real  world 
+N. A. Al-Khulaidi et al. [23] analysed algorithms like LR, KNN, GNB and RBF-SVM , AdaBoost, DT and XGBoost also  different simulated and real  world 
 datasets.  The requirement for large and diverse datasets for effective 
 training is hindered by the limited availability of VANET-specific datasets. This limitation makes it difficult to ensure security as the datasets may not cover all potential attacks in VANETs . Performance under limited computational and power resources is also a major challenge.
 
-Mohamed Selim Korium et al. [13] Used four different ML algorithms Random Forest (RF), Extreme Gradient Boost (XGBoost), Category Boosting (Cat Boost), and Light Gradient Boosting Machine (LightGBM) on the CIC-IDS-2017, CSE-CIC-IDS-2018, and CIC-DDoS-2019 datasets separately and merged Implementing an ensemble learning technique as a potential solution, if the model is still overfitting even after tuning the hyperparameters . the datasets that contain a significant number of features, posing the challenge of
+Mohamed Selim Korium et al. [24] Used four different ML algorithms Random Forest (RF), Extreme Gradient Boost (XGBoost), Category Boosting (Cat Boost), and Light Gradient Boosting Machine (LightGBM) on the CIC-IDS-2017, CSE-CIC-IDS-2018, and CIC-DDoS-2019 datasets separately and merged Implementing an ensemble learning technique as a potential solution, if the model is still overfitting even after tuning the hyperparameters . the datasets that contain a significant number of features, posing the challenge of
 determining a strategy to select the optimal feature or to reduce the
 dimensionality. there are too many important hyper parameters in terms of
 accuracy and speed that make it challenging to choose the specific parameters that have a high influence on the model’s performance to achieve high accuracy
 with no overfitting issue and handle the false positives and false negatives.
 
-Danial Javaheri et al. [14] proposed Clustering methods such as
+Danial Javaheri et al. [25] proposed Clustering methods such as
 FCM which are very fast and incur very low overhead because they do not need any training.This makes them ideal for low-powered environments, as well as
 cases where there is a lack of labeled data. These models suffer from a high
 false positive rate and are sensitive to the initial data.Therefore,most
 clustering-based methods try to improve the clustering method by using, for
 instance,metaheuristic algorithms and achieve better results.
 
-Nimisha Pandey et al. [15] devised a  methodology using hybrid approach involving entropy analysis followed by Decision tree based ML layer , it is suitable for devices with low computational power. Entropy-based detection relies on setting a threshold for distinguishing normal and anomalous traffic. Choosing the wrong threshold can lead to False Positives (misidentifying normal traffic as an attack).False Negatives (failing to
+Nimisha Pandey et al. [26] devised a  methodology using hybrid approach involving entropy analysis followed by Decision tree based ML layer , it is suitable for devices with low computational power. Entropy-based detection relies on setting a threshold for distinguishing normal and anomalous traffic. Choosing the wrong threshold can lead to False Positives (misidentifying normal traffic as an attack).False Negatives (failing to
 detect actual DDoS attacks) .
 
-SP Priyadharshini et al. [16] Combines DTCN and LSTM in a Hybrid Deep
+SP Priyadharshini et al. [27] Combines DTCN and LSTM in a Hybrid Deep
 Learning model, optimized by HWSCS, for real-time DDoS detection and
 mitigation in FANETs. it has High computational cost and dependency on robust datasets for effective detection and routing optimization.
 
-N. Nishanth et al [17] used Bayesian Inference and Dempster-Shafer evidence
+N. Nishanth et al [28] used Bayesian Inference and Dempster-Shafer evidence
 theory to detect RREQ flooding attacks in a simulated Wireless Ad Hoc Network.
 The approach depends on simulation trace files, which may not fully reflect real-world conditions and dynamic network environments.
 
-In Awajan, A et al [18] proposal Preprocessing included feature selection, random sampling, and log normalization to create balanced datasets for
+In Awajan, A et al [29] proposal Preprocessing included feature selection, random sampling, and log normalization to create balanced datasets for
 training.Log normalization may not always reduce variability, and large datasets increase computational costs.
 
-Shahbaz Ahmad Khanday et al [19] demonstrated a lightweight intrusion detection system combining ML and DL algorithms to classify IoT network traffic and detect DDoS attacks. Faces challenges in resource constraints and may need further optimization for dynamic environments.
+Shahbaz Ahmad Khanday et al [30] demonstrated a lightweight intrusion detection system combining ML and DL algorithms to classify IoT network traffic and detect DDoS attacks. Faces challenges in resource constraints and may need further optimization for dynamic environments.
 
 
 \section{Methodology}
@@ -733,12 +733,30 @@ The authors would like to thank Prof. Padmanaban R., Assistant Professor Senior 
 
 
 \begin{thebibliography}{00}
+\bibitem{} K. Doshi, Y. Yilmaz and S. Uludag, "Timely Detection and Mitigation of Stealthy DDoS Attacks Via IoT Networks," in IEEE Transactions on Dependable and Secure Computing, vol. 18, no. 5, pp. 2164-2176.
 \bibitem{b1} Kumar, P., Bagga, H., Netam, B.S. et al. SAD-IoT: Security Analysis of DDoS Attacks in IoT Networks. Wireless Pers Commun 122, 87–108 (2022).
+\bibitem{b20}Mittal, M., Kumar, K. and Behal, S. Deep learning approaches for detecting DDoS attacks: a systematic review. Soft Comput 27, 13039–13075 (2023).
+\bibitem{} Kai-Yun Tsao, Thomas Girdler, Vassilios G. Vassilakis,
+A survey of cyber security threats and solutions for UAV communications and flying ad-hoc networks, Ad Hoc Networks, Volume 133, 2022, 102894,
+ISSN 1570-8705.
 \bibitem{b2} Said Neciri. (2024). Hybrid Deep Learning for Anomaly Detection in FANETs: A Defense Against DDoS Attacks. International Journal of Intelligent Systems and Applications in Engineering, 12(4), 3799
+\bibitem{} Gopal Singh Kushwah, Virender Ranga,
+Optimized extreme learning machine for detecting DDoS attacks in cloud computing, Computers and Security, Volume 105, 2021, 102260,ISSN 0167-4048.
 \bibitem{b3} Ain NU, Sardaraz M, Tahir M, Abo Elsoud MW, Alourani A. Securing IoT Networks Against DDoS Attacks: A Hybrid Deep Learning Approach. Sensors. 2025; 25(5):1346
+\bibitem{} Jean-Philippe Condomines, Ruohao Zhang, Nicolas Larrieu,
+Network intrusion detection system for UAV ad-hoc communication: From methodology design to real test validation, Ad Hoc Networks, Volume 90,
+2019, 101759,ISSN 1570-8705.
+\bibitem{} A. Hekmati, J. Zhang, T. Sarkar, N. Jethwa, E. Grippo and B. Krishnamachari, "Correlation-Aware Neural Networks for DDoS Attack Detection in IoT Systems," in IEEE/ACM Transactions on Networking, vol. 32, no. 5, pp. 3929-3944.
 \bibitem{b4} Lawall, Muhammad Aminu, Shaikh, Riaz Ahmed and Hassan, Syed Raheel (2021) A DDoS attack mitigation framework for IoT networks using fog computing. Procedia Computer Science, 182. pp. 13-20. ISSN 1877-0509.
 \bibitem{b5} Pooja Kumari, Ankit Kumar Jain, A comprehensive study of DDoS attacks over IoT network and their countermeasures, Computers and Security, Volume 127, 2023, 103096 , ISSN 0167-4048.
 \bibitem{b6} Bifet, Albert and Gavaldà, Ricard. (2009). Adaptive Learning from Evolving Data Streams. 249-260. 10.1007/978-3-642-03915-7-22.
+\bibitem{} Manuel Poisson, Rodrigo Carnier, and Kensuke Fukuda. 2024. GothX: a generator of customizable, legitimate and malicious IoT network traffic. In Proceedings of the 17th Cyber Security Experimentation and Test Workshop (CSET '24). Association for Computing Machinery, New York, NY, USA, 65–73.
+\bibitem{} Qing, Yi and Liu, Xiangyu and Du, Yanhui. (2023). MBB-IoT: Construction and Evaluation of IoT DDoS Traffic Dataset from a New Perspective. Computers, Materials and Continua. 76. 2095-2119. 10.32604/cmc.2023.039980. 
+\bibitem{} Bolodurina, I and Shukhman, Alexander and Parfenov, Denis and Zhigalov, A and Zabrodina, L. (2020). Investigation of the problem of classifying unbalanced datasets in identifying distributed denial of service attacks. Journal of Physics: Conference Series. 1679. 042020. 10.1088/1742-6596/1679/4/042020. 
+\bibitem{} Shanmugam, V., Razavi-Far, R., and  Hallaji, E. (2025). Addressing Class Imbalance in Intrusion Detection: A Comprehensive Evaluation of Machine Learning Approaches. Electronics, 14(1), 69. 
+\bibitem{} Sajal Bhatia, Desmond Schmidt, George Mohay, Alan Tickle,
+A framework for generating realistic traffic for Distributed Denial-of-Service attacks and Flash Events, Computers and Security, Volume 40,
+2014, Pages 95-107, ISSN 0167-4048.
 \bibitem{b7} Devrim Akgun, Selman Hizal, Unal Cavusoglu,A new DDoS attacks intrusion detection model based on deep learning for cybersecurity,Computers and Security,Volume 118,2022.
 \bibitem{b8} H. J. Hadi, U. Hayat, N. Musthaq, F. B. Hussain and Y. Cao, "Developing Realistic Distributed Denial of Service (DDoS) Dataset for Machine Learning-based Intrusion Detection System," 2022 9th 
 International Conference on Internet of Things: Systems, Management and Security (IOTSMS), Milan, Italy, 2022 
